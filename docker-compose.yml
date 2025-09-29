@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  spring-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spring-app
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    networks:
+      - viewpoint
+    depends_on:
+      - redis
+networks:
+  viewpoint-net:
+    name: viewpoint-net
+    driver: bridge

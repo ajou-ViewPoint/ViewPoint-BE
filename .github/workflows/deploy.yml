@@ -1,0 +1,48 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        port: ${{ secrets.EC2_PORT }}
+        script: |
+          # 프로젝트 디렉토리로 이동
+          cd /home/ubuntu/viewpoint
+          
+          # 최신 코드 pull
+          git pull origin ${{ github.ref_name }}
+          
+          # .env 파일 생성
+          cat > .env << EOF
+          MYSQL_HOST=${{ secrets.MYSQL_HOST }}
+          MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
+          MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+          EOF
+          
+          # 기존 컨테이너 중지 및 제거
+          docker-compose down
+          
+          # Gradle clean build (테스트 제외)
+          ./gradlew clean build -x test
+          
+          # Docker 이미지 빌드 및 컨테이너 실행
+          docker-compose up -d --build
+          
+          # 컨테이너 상태 확인
+          docker-compose ps
+          
+          # 로그 확인 (최근 50줄)
+          docker-compose logs --tail=50
