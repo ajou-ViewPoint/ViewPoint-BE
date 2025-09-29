@@ -7,10 +7,32 @@ on:
     branches: [ main ]
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        
+    - name: Build with Gradle
+      run: ./gradlew clean build -x test
+      
+    - name: Upload JAR to EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        password: ${{ secrets.EC2_PASSWORD }}
+        port: ${{ secrets.EC2_PORT }}
+        source: "build/libs/viewpoint-0.0.1-SNAPSHOT.jar"
+        target: "/home/ubuntu/viewpoint/build/libs/"
+        
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -22,9 +44,6 @@ jobs:
           # 프로젝트 디렉토리로 이동
           cd /home/ubuntu/viewpoint
           
-          # 최신 코드 pull
-          git pull origin ${{ github.ref_name }}
-          
           # .env 파일 생성
           cat > .env << EOF
           MYSQL_HOST=${{ secrets.MYSQL_HOST }}
@@ -33,16 +52,13 @@ jobs:
           EOF
           
           # 기존 컨테이너 중지 및 제거
-          docker compose down
-          
-          # Gradle clean build (테스트 제외)
-          ./gradlew clean build -x test
+          docker-compose down
           
           # Docker 이미지 빌드 및 컨테이너 실행
-          docker compose up -d --build
+          docker-compose up -d --build
           
           # 컨테이너 상태 확인
-          docker compose ps
+          docker-compose ps
           
           # 로그 확인 (최근 50줄)
-          docker compose logs --tail=50
+          docker-compose logs --tail=50
