@@ -43,6 +43,8 @@ jobs:
         script: |
           # 프로젝트 디렉토리로 이동
           cd /home/ubuntu/viewpoint
+
+          git pull origin ${{ github.ref_name }}
           
           # .env 파일 생성
           cat > .env << EOF
