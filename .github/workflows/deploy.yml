@@ -33,16 +33,16 @@ jobs:
           EOF
           
           # 기존 컨테이너 중지 및 제거
-          docker-compose down
+          docker compose down
           
           # Gradle clean build (테스트 제외)
           ./gradlew clean build -x test
           
           # Docker 이미지 빌드 및 컨테이너 실행
-          docker-compose up -d --build
+          docker compose up -d --build
           
           # 컨테이너 상태 확인
-          docker-compose ps
+          docker compose ps
           
           # 로그 확인 (최근 50줄)
-          docker-compose logs --tail=50
+          docker compose logs --tail=50
