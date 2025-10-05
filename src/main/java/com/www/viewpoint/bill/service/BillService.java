@@ -21,9 +21,14 @@ public class BillService {
         this.billRepository = billRepository;
     }
 
-    public Page<Bill> getBills(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+    public Page<Bill> getBills(int page, int size, String sortBy, String direction) {
+        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
         return billRepository.findAll(pageable);
+    }
+
+    public Optional<Bill> getBillById(Integer id) {
+        return billRepository.findById(id);
     }
 
 

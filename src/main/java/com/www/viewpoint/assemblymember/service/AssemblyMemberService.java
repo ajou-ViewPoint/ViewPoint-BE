@@ -8,7 +8,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.Optional;
 
 @Service
 public class AssemblyMemberService {
@@ -19,11 +20,13 @@ public class AssemblyMemberService {
         this.assemblyMemberRespotiroy = assemblyMemberRespotiroy;
     }
 
-    public Page<AssemblyMember> getAssemblyMemberAll(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+    public Page<AssemblyMember> getAssemblyMemberAll(int page, int size, String sortBy, String direction) {
+        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
         return assemblyMemberRespotiroy.findAll(pageable);
+    }
+
+    public Optional<AssemblyMember> getAssemblyMemberById(Long id) {
+        return assemblyMemberRespotiroy.findById(id);
     }
 }
