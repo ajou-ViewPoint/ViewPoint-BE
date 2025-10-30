@@ -11,6 +11,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.List;
+
 @Tag(name = "Bills API", description = "법안(Bill) 관련 API")
 @RestController
 @RequestMapping("/v1/bills")
@@ -54,4 +57,42 @@ public class BillController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @Operation(
+            summary = "키워드 기반 법안 검색",
+            description = "bill_title / bill_summary / proposer 에 keyword가 포함된 법안 목록을 반환합니다. 예: /v1/bills/search?keyword=의료"
+    )
+    @GetMapping("/search")
+    public ResponseEntity<List<Bill>> searchBillsByKeyword(
+            @Parameter(description = "검색어 (부분 일치, 대소문자 무시)", example = "의료")
+            @RequestParam(name = "keyword", required = false) String keyword
+    ) {
+        List<Bill> result = billService.searchBillsByKeyword(keyword);
+        return ResponseEntity.ok(result);
+    }
+
+    @Operation(
+            summary = "발의일 범위로 법안 검색",
+            description = "propose_dt가 [start, end] 사이인 법안을 반환합니다. 날짜는 yyyy-MM-dd 형식. " +
+                    "둘 중 하나만 줘도 동작합니다. 예: /v1/bills/search-by-date?start=2025-10-01&end=2025-10-30"
+    )
+    @GetMapping("/search-by-date")
+    public ResponseEntity<List<Bill>> searchBillsByDateRange(
+            @Parameter(description = "검색 시작일 (포함), 예: 2025-10-01", example = "2025-10-01")
+            @RequestParam(name = "start", required = false) String startStr,
+            @Parameter(description = "검색 종료일 (포함), 예: 2025-10-30", example = "2025-10-30")
+            @RequestParam(name = "end", required = false) String endStr
+    ) {
+        LocalDate startDate = null;
+        LocalDate endDate = null;
+
+        if (startStr != null && !startStr.isBlank()) {
+            startDate = LocalDate.parse(startStr); // 형식 안 맞으면 400 나도 괜찮음 (Spring이 예외 던짐)
+        }
+        if (endStr != null && !endStr.isBlank()) {
+            endDate = LocalDate.parse(endStr);
+        }
+
+        List<Bill> result = billService.searchBillsByDateRange(startDate, endDate);
+        return ResponseEntity.ok(result);
+    }
 }

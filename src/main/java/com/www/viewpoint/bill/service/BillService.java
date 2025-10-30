@@ -9,6 +9,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -30,7 +32,33 @@ public class BillService {
         return billRepository.findById(id);
     }
 
+    public List<Bill> searchBillsByKeyword(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return List.of();
+        }
+        return billRepository
+                .findByBillTitleContainingIgnoreCaseOrBillSummaryContainingIgnoreCaseOrProposerContainingIgnoreCase(
+                        keyword, keyword, keyword
+                );
+    }
 
+    public List<Bill> searchBillsByDateRange(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null && endDate == null) {
+            return List.of();
+        }
+        if (startDate == null) {
+            startDate = LocalDate.of(1900, 1, 1);
+        }
+        if (endDate == null) {
+            endDate = LocalDate.of(2999, 12, 31);
+        }
+        if (startDate.isAfter(endDate)) {
+            LocalDate tmp = startDate;
+            startDate = endDate;
+            endDate = tmp;
+        }
+        return billRepository.findByProposeDtBetween(startDate, endDate);
+    }
 
 
 

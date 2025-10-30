@@ -10,6 +10,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+import java.util.Optional;
+
 @RestController
 @RequestMapping("/v1/committees")
 @Tag(name = "위원회 API", description = "위원회 관련 API")
@@ -48,6 +51,44 @@ public class CommitteeController {
             @Parameter(description = "조회할 위원회의 ID", example = "3")
             @PathVariable Integer id) {
         return committeeService.getCommitteeById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+
+    @Operation(
+            summary = "위원회 상세 (구성원 + 정당 통계)",
+            description = """
+                    committee_name을 기준으로 위원회 멤버 전체와 정당 분포 통계를 반환합니다.
+                    예시: /v1/committees/detail?name=기후위기 특별위원회
+                    
+                    응답:
+                    {
+                      "committeeName": "...",
+                      "committeeId": 15,
+                      "membersByRole": {
+                        "위원": [
+                          { "memberId": 123, "name": "...", "party": "...", ... },
+                          ...
+                        ],
+                        "간사": [ ... ],
+                        "위원장": [ ... ]
+                      },
+                      "stats": {
+                        "더불어민주당": 15,
+                        "국민의힘": 3,
+                        "총 인원": 25
+                      }
+                    }
+                    """
+    )
+    @GetMapping("/detail")
+    public ResponseEntity<Map<String,Object>> getCommitteeDetail(
+            @Parameter(description = "위원회 이름 (committee_name과 일치)", example = "기후위기 특별위원회")
+            @RequestParam("name") String committeeName
+    ) {
+        Optional<Map<String,Object>> result = committeeService.getCommitteeMembersAndStats(committeeName);
+        return result
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
