@@ -1,7 +1,7 @@
 package com.www.viewpoint.committee.service;
 
 import com.www.viewpoint.committee.model.entity.Committee;
-import com.www.viewpoint.committee.respository.CommitteeRepository;
+import com.www.viewpoint.committee.repository.CommitteeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

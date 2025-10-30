@@ -67,4 +67,10 @@ public class Bill {
 
     @Column(name = "rgs_proc_date", nullable = false)
     private LocalDate rgsProcDate;
+
+    @Column(name = "propose_dt")
+    private LocalDate proposeDt;
+
+    @Column(name = "age")
+    private Integer age;
 }

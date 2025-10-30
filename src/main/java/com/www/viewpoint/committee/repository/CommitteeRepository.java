@@ -1,4 +1,4 @@
-package com.www.viewpoint.committee.respository;
+package com.www.viewpoint.committee.repository;
 
 import com.www.viewpoint.committee.model.entity.Committee;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -1,7 +1,7 @@
 package com.www.viewpoint.assemblymember.service;
 
 import com.www.viewpoint.assemblymember.model.entity.AssemblyMember;
-import com.www.viewpoint.assemblymember.respository.AssemblyMemberRespotiroy;
+import com.www.viewpoint.assemblymember.repository.AssemblyMemberRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,9 +14,9 @@ import java.util.Optional;
 @Service
 public class AssemblyMemberService {
 
-    private  AssemblyMemberRespotiroy assemblyMemberRespotiroy;
+    private AssemblyMemberRepository assemblyMemberRespotiroy;
 
-    public AssemblyMemberService(@Autowired AssemblyMemberRespotiroy assemblyMemberRespotiroy) {
+    public AssemblyMemberService(@Autowired AssemblyMemberRepository assemblyMemberRespotiroy) {
         this.assemblyMemberRespotiroy = assemblyMemberRespotiroy;
     }
 

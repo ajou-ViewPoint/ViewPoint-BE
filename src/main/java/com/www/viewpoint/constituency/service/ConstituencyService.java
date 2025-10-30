@@ -1,7 +1,7 @@
 package com.www.viewpoint.constituency.service;
 
 import com.www.viewpoint.constituency.model.entity.Constituency;
-import com.www.viewpoint.constituency.respository.ConstituencyRepository;
+import com.www.viewpoint.constituency.repository.ConstituencyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

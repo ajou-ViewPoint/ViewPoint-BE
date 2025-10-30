@@ -1,4 +1,4 @@
-package com.www.viewpoint.constituency.respository;
+package com.www.viewpoint.constituency.repository;
 
 import com.www.viewpoint.constituency.model.entity.Constituency;
 import org.springframework.data.jpa.repository.JpaRepository;

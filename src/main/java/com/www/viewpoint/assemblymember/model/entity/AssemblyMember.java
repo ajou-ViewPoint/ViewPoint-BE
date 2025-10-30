@@ -67,4 +67,7 @@ public class AssemblyMember {
 
     @Column(name = "party_id")
     private Integer partyId;
+
+    @Column(name = "age")
+    private Integer age;
 }
