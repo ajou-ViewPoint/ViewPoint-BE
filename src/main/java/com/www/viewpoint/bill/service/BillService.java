@@ -1,7 +1,10 @@
 package com.www.viewpoint.bill.service;
 
+import com.www.viewpoint.bill.model.dto.BillProposerMemberDto;
 import com.www.viewpoint.bill.model.entity.Bill;
+import com.www.viewpoint.bill.repository.BillProposerRepository;
 import com.www.viewpoint.bill.repository.BillRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,13 +17,11 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class BillService {
 
     private final BillRepository billRepository;
-
-    public BillService(@Autowired BillRepository billRepository) {
-        this.billRepository = billRepository;
-    }
+    private final BillProposerRepository billProposerRepository;
 
     public Page<Bill> getBills(int page, int size, String sortBy, String direction) {
         Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
@@ -28,6 +29,10 @@ public class BillService {
         return billRepository.findAll(pageable);
     }
 
+
+    public List<BillProposerMemberDto> getProposersByBillId(String billId) {
+        return billProposerRepository.findProposersByBillId(billId);
+    }
     public Optional<Bill> getBillById(Integer id) {
         return billRepository.findById(id);
     }
