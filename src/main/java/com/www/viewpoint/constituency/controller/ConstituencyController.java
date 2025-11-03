@@ -1,5 +1,6 @@
 package com.www.viewpoint.constituency.controller;
 
+import com.www.viewpoint.constituency.model.dto.WinnerInfoDto;
 import com.www.viewpoint.constituency.model.entity.Constituency;
 import com.www.viewpoint.constituency.service.ConstituencyService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/v1/constituencies")
@@ -50,6 +53,21 @@ public class ConstituencyController {
         return constituencyService.getConstituencyById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @Operation(summary = "시도/시군구별 의원 조회")
+    @GetMapping("/members")
+    public ResponseEntity<List<WinnerInfoDto>> getMembersByConstituency(
+            @Parameter(description = "시도명", example = "서울특별시")
+            @RequestParam(required = false) String sido,
+            @Parameter(description = "시군구명", example = "강남구")
+            @RequestParam(required = false) String gungu,
+            @Parameter(description = "국회 대수", example = "제22대")
+            @RequestParam(required = false) String eracos
+    ) {
+        return ResponseEntity.ok(
+                constituencyService.findMembersByRegion(sido, gungu, eracos)
+        );
     }
 }
 
