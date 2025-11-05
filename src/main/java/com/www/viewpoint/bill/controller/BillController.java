@@ -22,8 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BillController {
 
-    private BillService billService;
-
+    private final BillService billService;
 
 
     @Operation(

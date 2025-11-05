@@ -17,23 +17,7 @@ public class RecentBillService {
     }
 
     public List<Bill> getTop3RecentBills() {
-        List<Bill> allSorted = billRepository.findByProposeDtIsNotNullOrderByProposeDtDescIdDesc();
-        if (allSorted.isEmpty()) {
-            return List.of();
-        }
-
-        List<Bill> picked = new ArrayList<>(3);
-
-        for (Bill bill : allSorted) {
-            if (bill.getProposeDt() == null) {
-                continue;
-            }
-            picked.add(bill);
-            if (picked.size() >= 3) {
-                break;
-            }
-        }
-
-        return picked;
+        return billRepository.findTop3ByProposeDtIsNotNullOrderByProposeDtDescIdDesc();
     }
+
 }
