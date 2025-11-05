@@ -1,5 +1,8 @@
 package com.www.viewpoint.party.controller;
 
+import com.www.viewpoint.party.model.dto.PartyMemberInfoProjection;
+import com.www.viewpoint.party.model.dto.PartyMemberSummaryDto;
+import com.www.viewpoint.party.model.dto.PartySeatStatDto;
 import com.www.viewpoint.party.model.entity.Party;
 import com.www.viewpoint.party.service.PartyService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/v1/parties")
@@ -50,6 +55,47 @@ public class PartyController {
         return partyService.getPartyById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+
+    @Operation(
+            summary = "정당별 의원 목록 조회 (위성정당 및 대수 포함)",
+            description = "특정 정당명(partyName)과 대수(eraco)를 파라미터로 받아 해당 의원 목록을 조회합니다. "
+                    + "예: /v1/parties/members?partyName=더불어민주당&eraco=제22대"
+    )
+    @GetMapping("/members")
+    public ResponseEntity<PartyMemberSummaryDto> getPartyMembersByParams(
+            @Parameter(description = "조회할 정당명", example = "더불어민주당")
+            @RequestParam String partyName,
+
+            @Parameter(description = "조회할 국회 대수", example = "제22대")
+            @RequestParam String eraco
+    ) {
+        PartyMemberSummaryDto members =
+                partyService.getPartyMemberSummary(partyName, eraco);
+
+        return ResponseEntity.ok(members);
+    }
+    @Operation(
+            summary = "정당별 의석 통계 조회",
+            description = """
+            특정 국회 대수(eraco)에 해당하는 정당별 의석 현황을 조회합니다.
+            각 정당의 지역구 의석수, 비례대표 의석수, 그리고 총 의석수를 함께 반환합니다.
+            예: /v1/parties/seats?eraco=제22대
+            """
+    )
+    @GetMapping("/seats")
+    public ResponseEntity<PartySeatStatDto> getPartySeatsByEraco(
+            @Parameter(description = "조회할 국회 대수", example = "제22대")
+            @RequestParam String eraco
+    ) {
+        PartySeatStatDto result = partyService.getPartySeatsByErcao(eraco);
+        System.out.printf(result.toString());
+        if (result == null || result.partySeatStats().isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(result);
     }
 }
 

@@ -1,11 +1,13 @@
 package com.www.viewpoint.bill.controller;
 
+import com.www.viewpoint.bill.model.dto.BillProposerMemberDto;
 import com.www.viewpoint.bill.model.entity.Bill;
 import com.www.viewpoint.bill.service.BillService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -17,13 +19,11 @@ import java.util.List;
 @Tag(name = "Bills API", description = "법안(Bill) 관련 API")
 @RestController
 @RequestMapping("/v1/bills")
+@RequiredArgsConstructor
 public class BillController {
 
     private BillService billService;
 
-    BillController(@Autowired BillService billService) {
-        this.billService = billService;
-    }
 
 
     @Operation(
@@ -94,5 +94,21 @@ public class BillController {
 
         List<Bill> result = billService.searchBillsByDateRange(startDate, endDate);
         return ResponseEntity.ok(result);
+    }
+
+    @Operation(
+            summary = "법안 제안자 조회",
+            description = "특정 법안 ID로 제안자 목록을 반환합니다."
+    )
+    @GetMapping("/{billId}/proposers")
+    public ResponseEntity<List<BillProposerMemberDto>> getProposersByBillId(
+            @Parameter(description = "법안 ID", example = "PRC_A2B5Z0A5H0I2G1F1F0D3E1M0N8L2M1")
+            @PathVariable String billId
+    ) {
+        List<BillProposerMemberDto> proposers = billService.getProposersByBillId(billId);
+        if (proposers.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(proposers);
     }
 }
