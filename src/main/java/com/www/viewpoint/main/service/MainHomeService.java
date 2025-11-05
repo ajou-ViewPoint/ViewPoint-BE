@@ -14,68 +14,41 @@ import java.util.List;
 @Service
 public class MainHomeService {
 
-    private final BillRepository billRepository;
+    private final RecentBillService recentBillService;
     private final AssemblyMemberRepository assemblyMemberRepository;
 
-    public MainHomeService(BillRepository billRepository,
-                           AssemblyMemberRepository assemblyMemberRepository) {
-        this.billRepository = billRepository;
+    public MainHomeService(RecentBillService recentBillService, AssemblyMemberRepository assemblyMemberRepository) {
+        this.recentBillService = recentBillService;
         this.assemblyMemberRepository = assemblyMemberRepository;
     }
 
-    // 1) 최근 법안 3개 로직 (이전 RecentBillService.getTop3RecentBills)
     private List<Bill> pickRecentBillsTop3() {
-        List<Bill> allSorted = billRepository.findByProposeDtIsNotNullOrderByProposeDtDescIdDesc();
-        if (allSorted.isEmpty()) {
-            return List.of();
-        }
-
-        List<Bill> picked = new ArrayList<>(3);
-        for (Bill bill : allSorted) {
-            if (bill.getProposeDt() == null) continue;
-            picked.add(bill);
-            if (picked.size() >= 3) break;
-        }
-        return picked;
+        return recentBillService.getTop3RecentBills();
     }
 
-    // 2) 의원 랜덤 8명 뽑기
     private List<MemberSimpleDto> pickRandomMembersForAge(Integer age) {
-        List<AssemblyMember> members;
+        List<AssemblyMember> members =
+                (age != null && age > 0)
+                        ? assemblyMemberRepository.findRandomByAgeLimit8(age)
+                        : assemblyMemberRepository.findRandomLimit8();
 
-        if (age != null) {
-            members = assemblyMemberRepository.findRandomByAgeLimit8(age);
-            if (members == null || members.isEmpty()) {
-                // fallback 전체 랜덤
-                members = assemblyMemberRepository.findRandomLimit8();
-            }
-        } else {
+        if (members == null || members.isEmpty()) { // fallback
             members = assemblyMemberRepository.findRandomLimit8();
         }
 
-        List<MemberSimpleDto> dtoList = new ArrayList<>();
-        for (AssemblyMember m : members) {
-            dtoList.add(MemberSimpleDto.builder()
-                    .naasCode(m.getNaasCode())
-                    .name(m.getName())
-                    .profileImage(m.getProfileImage())
-                    .build()
-            );
-        }
-
-        return dtoList;
+        return members.stream()
+                .map(m -> MemberSimpleDto.builder()
+                        .naasCode(m.getNaasCode())
+                        .name(m.getName())
+                        .profileImage(m.getProfileImage())
+                        .build())
+                .toList();
     }
 
-    // 3) 메인 홈 응답 조립
+    // 3) 메인 홈 응답
     public MainHomeResponse getMainHomeData() {
-        // 최근 법안 3개
         List<Bill> recentBills = pickRecentBillsTop3();
-
-        // 그중 가장 첫 번째(가장 최신) bill의 age를 기준으로 의원 랜덤 뽑자
-        Integer targetAge = null;
-        if (!recentBills.isEmpty()) {
-            targetAge = recentBills.get(0).getAge(); // Bill 엔티티에 age 필드 있다고 가정
-        }
+        Integer targetAge = recentBills.isEmpty() ? null : recentBills.get(0).getAge();
 
         List<MemberSimpleDto> members = pickRandomMembersForAge(targetAge);
 
