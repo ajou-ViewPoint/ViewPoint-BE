@@ -2,6 +2,7 @@ package com.www.viewpoint.assemblymember.controller;
 
 import com.www.viewpoint.assemblymember.model.entity.AssemblyMember;
 import com.www.viewpoint.assemblymember.service.AssemblyMemberService;
+import com.www.viewpoint.bill.model.dto.BillSummaryDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,4 +52,22 @@ public class AssemblyMemberController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
+
+    @Operation(
+            summary = "특정 의원이 발의한 법안 조회",
+            description = "member_id 기준으로 의원이 발의한 모든 법안을 페이지네이션하여 조회합니다."
+    )
+    @GetMapping("/{id}/bills")
+    public ResponseEntity<Page<BillSummaryDto>> getBillsByMemberId(
+            @Parameter(description = "의원 ID", example = "1024")
+            @PathVariable Integer id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+            ) {
+        Page<BillSummaryDto> bills = assemblyMemberService.getBillsByMemberId(id, page, size, "b.proposeDt", "desc");
+        return ResponseEntity.ok(bills);
+    }
+
+
 }

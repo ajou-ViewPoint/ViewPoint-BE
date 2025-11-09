@@ -22,7 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BillController {
 
-    private BillService billService;
+    private final BillService billService;
 
 
 
@@ -102,8 +102,8 @@ public class BillController {
     )
     @GetMapping("/{billId}/proposers")
     public ResponseEntity<List<BillProposerMemberDto>> getProposersByBillId(
-            @Parameter(description = "법안 ID", example = "PRC_A2B5Z0A5H0I2G1F1F0D3E1M0N8L2M1")
-            @PathVariable String billId
+            @Parameter(description = "법안 ID", example = "123")
+            @PathVariable Long billId
     ) {
         List<BillProposerMemberDto> proposers = billService.getProposersByBillId(billId);
         if (proposers.isEmpty()) {
