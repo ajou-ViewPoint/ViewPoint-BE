@@ -24,8 +24,6 @@ public class BillController {
 
     private final BillService billService;
 
-
-
     @Operation(
             summary = "전체 법안 조회",
             description = "등록된 모든 법안을 페이지네이션과 정렬 옵션으로 조회합니다. 예시: /v1/bills?page=0&size=10&sortBy=billTitle&direction=asc"
