@@ -3,8 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches: [ main, dev ]
-  pull_request:
-    branches: [ main ]
+
 
 jobs:
   build-and-deploy:
@@ -51,6 +50,7 @@ jobs:
           MYSQL_HOST=${{ secrets.MYSQL_HOST }}
           MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
           MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+          TOSS_SECRET_KEY=${{ secrets.TOSS_SECRET_KEY }}
           EOF
           
           # 기존 컨테이너 중지 및 제거
