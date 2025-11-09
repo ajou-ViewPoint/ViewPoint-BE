@@ -30,8 +30,8 @@ public class BillService {
     }
 
 
-    public List<BillProposerMemberDto> getProposersByBillId(String billId) {
-        return billProposerRepository.findProposersByBillId(billId);
+    public List<BillProposerMemberDto> getProposersByBillId(Long billId) {
+        return billProposerRepository.findProposersByBillDbId(billId);
     }
     public Optional<Bill> getBillById(Integer id) {
         return billRepository.findById(id);

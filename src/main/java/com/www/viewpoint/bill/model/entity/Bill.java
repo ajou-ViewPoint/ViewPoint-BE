@@ -20,6 +20,9 @@ public class Bill {
     @Column(name = "id")
     private Integer id;
 
+    @Column(name="bill_id")
+    private String billId;
+
     @Column(name = "bill_title", columnDefinition = "TEXT")
     private String billTitle;
 

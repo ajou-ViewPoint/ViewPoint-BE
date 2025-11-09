@@ -24,7 +24,6 @@ public class BillController {
 
     private final BillService billService;
 
-
     @Operation(
             summary = "전체 법안 조회",
             description = "등록된 모든 법안을 페이지네이션과 정렬 옵션으로 조회합니다. 예시: /v1/bills?page=0&size=10&sortBy=billTitle&direction=asc"
@@ -101,8 +100,8 @@ public class BillController {
     )
     @GetMapping("/{billId}/proposers")
     public ResponseEntity<List<BillProposerMemberDto>> getProposersByBillId(
-            @Parameter(description = "법안 ID", example = "PRC_A2B5Z0A5H0I2G1F1F0D3E1M0N8L2M1")
-            @PathVariable String billId
+            @Parameter(description = "법안 ID", example = "123")
+            @PathVariable Long billId
     ) {
         List<BillProposerMemberDto> proposers = billService.getProposersByBillId(billId);
         if (proposers.isEmpty()) {
