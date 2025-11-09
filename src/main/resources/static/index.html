@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <title>ALIKE 후원하기 (테스트)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://js.tosspayments.com/v1"></script>
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background:#f7f8fc; padding:30px; }
+        .container { max-width:480px; margin:auto; background:white; border-radius:10px; box-shadow:0 6px 16px rgba(0,0,0,0.08); padding:24px; }
+        h1 { text-align:center; margin-bottom:16px; }
+        label { display:block; margin-top:12px; font-weight:600; }
+        input, textarea { width:100%; padding:10px; margin-top:6px; border:1px solid #ccc; border-radius:6px; font-size:14px; }
+        textarea { resize:vertical; min-height:70px; }
+        button { margin-top:18px; width:100%; background:#4F46E5; color:white; border:none; padding:12px; border-radius:8px; font-size:15px; cursor:pointer; }
+        button:hover { background:#4338CA; }
+        .hidden { display:none; }
+        .log { margin-top:20px; background:#0b1020; color:#9de1ff; padding:10px; border-radius:8px; font-size:12px; white-space:pre-wrap; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>ALIKE 후원하기</h1>
+
+    <div id="donationForm">
+        <label>후원자 이름</label>
+        <input id="donorName" placeholder="홍길동"/>
+
+        <label>이메일 (선택)</label>
+        <input id="donorEmail" placeholder="gildong@example.com"/>
+
+        <label>후원 메시지 (선택)</label>
+        <textarea id="message" placeholder="프로젝트 응원합니다!"></textarea>
+
+        <label>후원 금액 (원)</label>
+        <input id="amount" type="number" min="100" value="1000"/>
+
+        <button id="donateBtn">후원 결제하기</button>
+    </div>
+
+    <div id="confirmSection" class="hidden">
+        <h3>결제가 완료되었습니다 ✅</h3>
+        <p><strong>결제 승인하기</strong> 버튼을 눌러 서버에 결제 정보를 저장합니다.</p>
+        <button id="confirmBtn">결제 승인하기</button>
+    </div>
+
+    <div class="log" id="log"></div>
+</div>
+
+<script>
+    const SERVER_URL = "http://localhost:8080"; // ✅ 서버 주소
+    const tossPayments = TossPayments("test_ck_P9BRQmyarYyEydLmDed7rJ07KzLN"); // ✅ 테스트 위젯 키
+
+    const $ = (id) => document.getElementById(id);
+    const log = (msg, data) => {
+        $("log").textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n${data ? JSON.stringify(data,null,2):""}\n\n` + $("log").textContent;
+    };
+
+    $("donateBtn").addEventListener("click", async () => {
+        try {
+            const donorName = $("donorName").value.trim();
+            const donorEmail = $("donorEmail").value.trim();
+            const message = $("message").value.trim();
+            const amount = parseInt($("amount").value);
+
+            if (!donorName || !amount) {
+                alert("후원자 이름과 금액은 필수입니다.");
+                return;
+            }
+
+            // 1️⃣ 서버에 후원 데이터 전송
+            log("POST /v1/donations 요청...");
+            const donationRes = await fetch(`${SERVER_URL}/v1/donations`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ donorName, donorEmail, message, amount })
+            });
+            const donation = await donationRes.json();
+            log("Donation 생성 완료", donation);
+
+            // 2️⃣ Toss 결제창 열기
+            await tossPayments.requestPayment("카드", {
+                amount: donation.amount,
+                orderId: donation.donationId,
+                orderName: `${donation.donorName}님의 후원`,
+                successUrl: `${window.location.origin}/viewpoint/viewpoint.main/static/index.html?success=true`,
+                failUrl: `${window.location.origin}/viewpoint/viewpoint.main/static/index.html?fail=true`
+            });
+
+        } catch (err) {
+            log("결제 요청 중 오류", err);
+            alert("결제 요청 실패: 콘솔 로그를 확인하세요.");
+        }
+    });
+
+    // 3️⃣ 페이지 로드 시 URL 파라미터 검사
+    window.addEventListener("load", () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("success") === "true") {
+            log("결제 성공 redirect 감지", Object.fromEntries(params));
+            $("donationForm").classList.add("hidden");
+            $("confirmSection").classList.remove("hidden");
+
+            $("confirmBtn").onclick = async () => {
+                const paymentKey = params.get("paymentKey");
+                const orderId = params.get("orderId");
+                const amount = params.get("amount");
+
+                try {
+                    const confirmRes = await fetch(`${SERVER_URL}/v1/payments/confirm`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ paymentKey, orderId, amount })
+                    });
+                    const data = await confirmRes.json();
+                    log("결제 승인 완료", data);
+                    alert("🎉 결제가 승인되었습니다. 후원 감사합니다!");
+                } catch (e) {
+                    log("결제 승인 실패", e);
+                    alert("결제 승인 중 오류 발생");
+                }
+            };
+        } else if (params.get("fail") === "true") {
+            log("결제 실패", Object.fromEntries(params));
+            alert("❌ 결제가 실패했습니다.");
+        }
+    });
+</script>
+</body>
+</html>
