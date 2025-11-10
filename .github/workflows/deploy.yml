@@ -51,6 +51,7 @@ jobs:
           MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
           MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
           TOSS_SECRET_KEY=${{ secrets.TOSS_SECRET_KEY }}
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
           EOF
           
           # 기존 컨테이너 중지 및 제거
