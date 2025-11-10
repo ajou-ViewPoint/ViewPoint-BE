@@ -9,10 +9,18 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
 
-  springdoc:
-    swagger-ui:
-      path: /swagger-ui.html
-      enabled: true
-    api-docs:
-      path: /v3/api-docs
-      enabled: true
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  api-base: https://generativelanguage.googleapis.com
+  api-version: v1beta
+  model-primary: gemini-2.5-pro
+  model-fallback: gemini-2.5-flash
+  image-model: gemini-2.5-flash-image
