@@ -24,3 +24,7 @@ gemini:
   model-primary: gemini-2.5-pro
   model-fallback: gemini-2.5-flash
   image-model: gemini-2.5-flash-image
+
+payment:
+  toss:
+    secret-key: ${TOSS_SECRET_KEY}
