@@ -2,9 +2,12 @@ package com.www.viewpoint.main.service;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
+import org.jsoup.select.NodeVisitor;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -14,6 +17,9 @@ import org.springframework.stereotype.Service;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,126 +43,159 @@ public class GoogleNewsCrawlerService {
         return """
         역할: 당신은 뉴스 본문 추출기다.
         입력: 웹페이지의 전체 HTML 또는 원문 텍스트가 주어진다.
-        목표: 기사 본문만 깔끔한 문단 텍스트로 추출한다.
+        목표: 기사 본문만 깔끔한 문단 텍스트로 추출하여 줄글로 요약.
         규칙:
         - 광고, 구독 유도, 추천/인기 기사, '돌아가기', 해시태그, 저작권 고지, 댓글 유도, 상하단 네비 제거.
-        - 제목/부제/본문만 남기되 문단 구분은 줄바꿈 유지.
-        - 중복 문장/문단 제거. 요약/창작 금지.
-        - 출력은 순수 본문 텍스트만(plain text).
+        - 버튼 관련 텍스트 제거.
+        - 중복 문장/문단 제거.
+        - 출력은 순수 본문 기사 텍스트만(plain text).
         """;
     }
 
+    private List<NewsCard> fetchGoogleNewsCards(String query, int limit) throws Exception {
+        String url = "https://www.google.com/search?q="
+                + URLEncoder.encode(query, StandardCharsets.UTF_8)
+                + "&tbm=nws&tbs=qdr:d&hl=ko&gl=KR&lr=lang_ko";
+
+        Document doc = Jsoup.connect(url)
+                .userAgent(UA)
+                .referrer("https://www.google.com/")
+                .timeout(8000)
+                .get();
+
+        List<NewsCard> result = new ArrayList<>();
+
+        for (Element cardEl : doc.select("div.SoaBEf, div.dbsr, div.xuvV6b")) {
+            Element a = cardEl.selectFirst("a.WlydOe, a");
+            Element ttl = cardEl.selectFirst("div.MBeuO, div.n0jPhd, div[role=heading]");
+            Element src = cardEl.selectFirst("div.CEMjEf, div.SVJrMe, div.MVoHrc, span.xQ82C");
+
+            String link = a != null ? a.attr("href") : "";
+            String title = ttl != null ? ttl.text() : "(제목 없음)";
+            String source = src != null ? src.text() : "(언론사 없음)";
+
+            if (!link.isBlank()) {
+                result.add(new NewsCard(title, link, source));
+            }
+
+            if (result.size() >= limit) break;
+        }
+
+        if (result.isEmpty()) {
+            log.warn("No news cards found for query={}", query);
+        } else {
+            log.info("Fetched {} news cards for query={}", result.size(), query);
+        }
+
+        return result;
+    }
+
     public Article getTopNewsWithGemini() {
-        NewsCard card = null;
-        String renderedHtml = "";
-        String preExtract = "";
+        final int MAX_CANDIDATES = 5;
+        final int MIN_VALID_BODY = 1200;
+        final int MIN_PRE_EXTRACT_FOR_GEMINI = 3000;
+        final int MAX_GEMINI_INPUT = 60000;
 
-        // 최소 본문 길이 기준 (이 이하면 실패로 보고 다른 소스 사용)
-        final int MIN_VALID_BODY = 120;        // 필요하면 200~300으로 올려도 됨
-        final int MIN_PRE_EXTRACT_FOR_GEMINI = 300; // 이 이하면 preExtract 대신 HTML 전체를 LLM에 줌
-        final int MAX_GEMINI_INPUT = 60000;    // LLM에 넘길 최대 길이(과도한 토큰 방지)
-
+        List<NewsCard> cards;
         try {
-            // 1. 구글 뉴스 상단 카드 가져오기
-            card = fetchTopGoogleNewsCard("법안");
-            log.info("Top news card: {}", card);
+            cards = fetchGoogleNewsCards("법안", MAX_CANDIDATES);
+        } catch (Exception e) {
+            log.error("Failed to fetch Google news cards", e);
+            return new Article("(제목 없음)", "", "(언론사 없음)", "(본문 내용 없음)");
+        }
 
-            if (card == null) {
-                return new Article("(제목 없음)", "", "(언론사 없음)", "(본문 내용 없음)");
-            }
+        if (cards == null || cards.isEmpty()) {
+            return new Article("(제목 없음)", "", "(언론사 없음)", "(본문 내용 없음)");
+        }
 
-            // 2. 렌더링 HTML 가져오기
-            renderedHtml = fetchRenderedHtml(card.link());
-            int htmlLen = (renderedHtml != null) ? renderedHtml.length() : 0;
-            log.info("Rendered HTML length = {}", htmlLen);
+        Article bestFallback = null;
 
-            // 3. 사전 추출 (셀렉터 기반)
-            preExtract = preExtractLikelyBody(renderedHtml);
-            int preLen = (preExtract != null) ? preExtract.length() : 0;
-            log.info("PreExtract length = {}", preLen);
+        for (NewsCard card : cards) {
+            String renderedHtml = "";
+            String preExtract = "";
 
-            // 4. Gemini에 넘길 입력 결정 로직 (여기가 핵심 수정)
-            String geminiInput;
-            if (preLen >= MIN_PRE_EXTRACT_FOR_GEMINI) {
-                // 충분히 긴 본문 후보면 그걸 사용
-                geminiInput = preExtract;
-            } else if (htmlLen > 0) {
-                // preExtract가 너무 짧으면 전체 HTML(or text)을 사용
-                // 너무 길면 앞부분만 잘라서 전달
-                String src = renderedHtml;
-                if (htmlLen > MAX_GEMINI_INPUT) {
-                    src = renderedHtml.substring(0, MAX_GEMINI_INPUT);
+            try {
+                log.info("Trying card: {}", card);
+
+                renderedHtml = fetchRenderedHtml(card.link());
+                int htmlLen = renderedHtml != null ? renderedHtml.length() : 0;
+                log.info("Rendered HTML length = {}", htmlLen);
+
+                if (htmlLen < 500) {
+                    log.info("Skip card (too short html): {}", card.link());
+                    continue; // 영상/에러 가능성 높음 → 다음 기사
                 }
-                geminiInput = src;
-            } else {
-                geminiInput = "";
-            }
 
-            log.info("Gemini input length(final) = {}", geminiInput.length());
+                preExtract = preExtractLikelyBody(renderedHtml);
+                int preLen = preExtract != null ? preExtract.length() : 0;
+                log.info("PreExtract length = {}", preLen);
 
-            String finalBody = "";
-
-            // 5. Gemini 호출 (입력이 있을 때만)
-            if (!geminiInput.isBlank()) {
-                try {
-                    finalBody = geminiClient.extractArticlePlain(buildSystemPrompt(), geminiInput);
-                } catch (Exception llmErr) {
-                    log.warn("Gemini call failed, fallback to preExtract/html. reason={}", llmErr.toString());
+                // 영상 기사 등: 본문이 거의 없으면 이 카드 스킵
+                if (preLen < MIN_VALID_BODY) {
+                    log.info("Skip card (preExtract too short): {}", card.link());
+                    // fallback 후보로는 남겨둘 수 있음
+                    if (bestFallback == null) {
+                        String fallbackText = (preExtract != null && !preExtract.isBlank())
+                                ? preExtract.trim()
+                                : Jsoup.parse(renderedHtml).text();
+                        bestFallback = new Article(
+                                card.title(), card.link(), card.source(),
+                                (fallbackText != null && !fallbackText.isBlank())
+                                        ? fallbackText
+                                        : "(본문 내용 없음)"
+                        );
+                    }
+                    continue;
                 }
-            }
 
-            // 6. Gemini 결과가 짧으면 실패로 보고 fallback
-            if (finalBody == null || finalBody.trim().length() < MIN_VALID_BODY) {
-                // 1순위: preExtract가 그나마 길다면 사용
-                if (preLen >= MIN_VALID_BODY) {
+                // Gemini에 넘길 입력 결정
+                String geminiInput = preLen >= MIN_PRE_EXTRACT_FOR_GEMINI
+                        ? preExtract
+                        : (htmlLen > MAX_GEMINI_INPUT
+                        ? renderedHtml.substring(0, MAX_GEMINI_INPUT)
+                        : renderedHtml);
+
+                log.info("Gemini input length(final) = {}", geminiInput.length());
+
+                String finalBody = "";
+                if (!geminiInput.isBlank()) {
+                    try {
+                        finalBody = geminiClient.extractArticlePlain(buildSystemPrompt(), geminiInput);
+                    } catch (Exception llmErr) {
+                        log.warn("Gemini call failed for card {}, fallback to preExtract/html. reason={}",
+                                card.link(), llmErr.toString());
+                    }
+                }
+
+                // Gemini 결과 검증
+                if (finalBody == null || finalBody.trim().length() < MIN_VALID_BODY) {
+                    // Gemini 결과 별로면 preExtract 사용
                     finalBody = preExtract;
                 }
-                // 2순위: 전체 HTML에서 텍스트만 뽑기
-                else if (htmlLen > 0) {
-                    String text = Jsoup.parse(renderedHtml).text();
-                    finalBody = (text != null && text.trim().length() >= MIN_VALID_BODY)
-                            ? text
-                            : "";
+
+                if (finalBody != null && finalBody.trim().length() >= MIN_VALID_BODY) {
+
+                    String cleaned = finalBody.trim();
+                    log.info("Selected card {} with final body length = {}", card.link(), cleaned.length());
+                    return new Article(card.title(), card.link(), card.source(), cleaned);
                 } else {
-                    finalBody = "";
+                    log.info("Skip card (final body too short): {}", card.link());
                 }
+
+            } catch (Exception e) {
+                log.warn("Error while processing card {}: {}", card, e.toString());
             }
-
-            log.info("Final body length = {}", (finalBody != null ? finalBody.length() : 0));
-
-            // 7. 그래도 없으면 명시적으로 표시
-            if (finalBody == null || finalBody.trim().isEmpty()) {
-                finalBody = "(본문 내용 없음)";
-            }
-
-            return new Article(
-                    card.title(),
-                    card.link(),
-                    card.source(),
-                    finalBody.trim()
-            );
-
-        } catch (Exception e) {
-            log.error("getTopNewsWithGemini() failed, returning best-effort fallback", e);
-
-            String title = (card != null) ? card.title() : "(제목 없음)";
-            String link = (card != null) ? card.link() : "";
-            String src  = (card != null) ? card.source() : "(언론사 없음)";
-
-            String fallback;
-            if (preExtract != null && preExtract.trim().length() >= MIN_VALID_BODY) {
-                fallback = preExtract.trim();
-            } else if (renderedHtml != null && !renderedHtml.isBlank()) {
-                String text = Jsoup.parse(renderedHtml).text();
-                fallback = (text != null && text.trim().length() >= MIN_VALID_BODY)
-                        ? text.trim()
-                        : "(본문 내용 없음)";
-            } else {
-                fallback = "(본문 내용 없음)";
-            }
-
-            return new Article(title, link, src, fallback);
         }
+
+        // 후보들 다 별로였으면, 그 중 그나마 첫 fallback 사용
+        if (bestFallback != null) {
+            log.info("Using bestFallback article: {}", bestFallback.link());
+            return bestFallback;
+        }
+
+        // 진짜 아무 것도 못 건지면
+        NewsCard first = cards.get(0);
+        return new Article(first.title(), first.link(), first.source(), "(본문 내용 없음)");
     }
 
     private NewsCard fetchTopGoogleNewsCard(String query) throws Exception {
@@ -192,85 +231,31 @@ public class GoogleNewsCrawlerService {
             return "";
         }
 
-        WebDriverManager.chromedriver().setup();
-
-        ChromeOptions options = new ChromeOptions();
-        options.setPageLoadStrategy(PageLoadStrategy.NORMAL);
-        options.addArguments(
-                "--headless",                    // 안정적인 headless
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--window-size=1366,768",
-                "--lang=ko-KR",
-                "--user-agent=" + UA,
-                "--disable-blink-features=AutomationControlled",
-                "--remote-allow-origins=*"
-        );
-        options.setExperimentalOption("excludeSwitches", new String[]{"enable-automation"});
-        options.setExperimentalOption("useAutomationExtension", false);
-
-        WebDriver driver = new ChromeDriver(options);
         try {
-            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(25));
-            driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(25));
+            // Jsoup으로 직접 HTML 요청
+            Connection connection = Jsoup.connect(url)
+                    .userAgent(UA)
+                    .referrer("https://www.google.com/")
+                    .header("Accept-Language", "ko-KR,ko;q=0.9")
+                    .timeout(10000)  // 10초 타임아웃
+                    .ignoreContentType(true)
+                    .ignoreHttpErrors(true);
 
-            driver.get(url);
+            Document doc = connection.get();
 
-            JavascriptExecutor js = (JavascriptExecutor) driver;
+            // JS 없이 렌더링된 HTML 반환
+            String html = doc.outerHtml();
 
-            // 1) 문서 로딩 완료 대기
-            try {
-                new WebDriverWait(driver, Duration.ofSeconds(10))
-                        .pollingEvery(Duration.ofMillis(300))
-                        .until(d -> "complete".equals(
-                                js.executeScript("return document.readyState")));
-            } catch (TimeoutException ignore) {
-                log.debug("readyState complete 대기 타임아웃 (무시)");
+            // HTML이 너무 짧으면 실패 처리
+            if (html == null || html.length() < 500) {
+                log.warn("Jsoup fetch returned unusually short HTML ({} chars)", html.length());
             }
 
-            // 2) 본문 후보 등장 or 텍스트 충분히 쌓일 때까지 대기
-            try {
-                new WebDriverWait(driver, Duration.ofSeconds(8))
-                        .pollingEvery(Duration.ofMillis(300))
-                        .until(d -> {
-                            String script =
-                                    "const sels = [" +
-                                            "'div#newsct_article','div#dic_area','article'," +
-                                            "'div#articleBody','div#article_body','div#article-view-content-div'," + // eInfomax 등
-                                            "'div[itemprop=articleBody]','section.article-body'," +
-                                            "'div.article-body','div#content','div#contents','div#container'" +
-                                            "];" +
-                                            "for (const s of sels) {" +
-                                            "if (document.querySelector(s)) return true;" +
-                                            "}" +
-                                            "return document.body && document.body.innerText && " +
-                                            "document.body.innerText.length > 1500;";
-                            Object ok = js.executeScript(script);
-                            return Boolean.TRUE.equals(ok);
-                        });
-            } catch (TimeoutException ignore) {
-                log.debug("본문 후보/텍스트 길이 대기 타임아웃 (무시)");
-            }
+            return html;
 
-            String html = driver.getPageSource();
-
-            // 3) 너무 짧으면 한 번 더 확인
-            if (html == null || html.length() < 1000) {
-                try {
-                    Thread.sleep(1500L);
-                } catch (InterruptedException ignored) { }
-                String retry = driver.getPageSource();
-                if (retry != null && retry.length() > (html == null ? 0 : html.length())) {
-                    html = retry;
-                }
-            }
-
-            return html != null ? html : "";
-        } finally {
-            try {
-                driver.quit();
-            } catch (Exception ignore) { }
+        } catch (Exception e) {
+            log.error("fetchRenderedHtml() failed via Jsoup: {}", e.getMessage(), e);
+            return "";
         }
     }
 
@@ -280,58 +265,123 @@ public class GoogleNewsCrawlerService {
         try {
             Document doc = Jsoup.parse(html);
 
+            // 1. 노이즈 엘리먼트 제거
             doc.select("""
-                    script, style, iframe, noscript, aside, figure, header, footer,
-                    .ad, [class*=ad], [id*=ad], [class*=banner], [id*=banner],
-                    [class*=recommend], [id*=recommend], [class*=related], [id*=related],
-                    [class*=subscribe], [id*=subscribe], [class*=popular], [id*=popular]
-                    """).remove();
+                script, style, iframe, noscript, aside, figure, header, footer,
+                .ad, [class*=ad], [id*=ad], [class*=banner], [id*=banner],
+                [class*=recommend], [id*=recommend], [class*=related], [id*=related],
+                [class*=subscribe], [id*=subscribe], [class*=popular], [id*=popular],
+                nav, .sns, .share, [class*=sns], [id*=sns], .social, [class*=footer]
+                """).remove();
 
-            String[] candidates = {
-                    "div#newsct_article","div#dic_area","article",
-                    "div#articleBody","div#article_body",
-                    "div[itemprop=articleBody]","section.article-body",
-                    "div.article-body","div#content","div#contents","div#container"
-            };
+            List<String> chunks = new ArrayList<>();
 
-            String best = "";
-            int bestLen = 0;
+            // 2. <article> 전체 수집
+            for (Element e : doc.select("article")) {
+                String t = e.text().trim();
+                if (t.length() >= 50) {
+                    chunks.add(t);
+                }
+            }
 
-            for (String sel : candidates) {
-                for (Element e : doc.select(sel)) {
-                    String text = e.text().trim();
-                    if (text.length() > bestLen) {
-                        best = text;
-                        bestLen = text.length();
+            // 3. id가 article* 인 div/section 전체 수집
+            for (Element e : doc.select("div[id^=article], section[id^=article]")) {
+                String t = e.text().trim();
+                if (t.length() >= 50) {
+                    chunks.add(t);
+                }
+            }
+
+            // 4. class에 article 포함된 컨테이너
+            for (Element e : doc.select("div[class*=article], section[class*=article]")) {
+                String t = e.text().trim();
+                if (t.length() >= 80) {
+                    chunks.add(t);
+                }
+            }
+
+            // 5. HTML 주석 중 "기사 본문" 힌트 활용
+            //    <!-- 기사 본문 -->, <!-- 기사 본분 --> 등 오타도 포함해서 검사
+            doc.traverse(new NodeVisitor() {
+                @Override
+                public void head(Node node, int depth) {
+                    if (node.nodeName().equals("#comment")) {
+                        String c = node.toString(); // <!-- ... -->
+                        String lower = c.toLowerCase();
+                        if (lower.contains("기사 본문") || lower.contains("기사 본분")) {
+                            // (1) 부모 엘리먼트 텍스트
+                            if (node.parent() instanceof Element parent) {
+                                String t = parent.text().trim();
+                                if (t.length() >= 50) {
+                                    chunks.add(t);
+                                }
+                            }
+                            // (2) 다음 형제 엘리먼트(실제 본문 블록인 경우 많음)
+                            Node sib = node.nextSibling();
+                            if (sib instanceof Element sibling) {
+                                String t = sibling.text().trim();
+                                if (t.length() >= 50) {
+                                    chunks.add(t);
+                                }
+                            }
+                        }
                     }
                 }
+
+                @Override
+                public void tail(Node node, int depth) { }
+            });
+
+            // 6. 중복 제거 + 합치기
+            LinkedHashSet<String> unique = new LinkedHashSet<>(chunks);
+            String combined = String.join("\n", unique).trim();
+
+            if (combined.length() >= 150) {
+                return cleanBodyText(combined);
             }
 
-            if (bestLen < 200) {
-                String joined = doc.select("article p, #newsct_article p, #dic_area p, p")
-                        .stream()
-                        .map(el -> el.text().trim())
-                        .filter(s -> s.length() > 10)
-                        .collect(Collectors.joining("\n"));
+            // 7. 부족하면 특정 영역 p 태그 기반
+            String pJoined = doc.select("article p, div[id^=article] p, section[id^=article] p, div[class*=article] p")
+                    .stream()
+                    .map(el -> el.text().trim())
+                    .filter(s -> s.length() > 10)
+                    .distinct()
+                    .collect(Collectors.joining("\n"));
 
-                if (joined.length() > bestLen) {
-                    best = joined;
-                    bestLen = joined.length();
-                }
+            if (pJoined.length() >= 150) {
+                return cleanBodyText(pJoined);
             }
 
-            if (best.isBlank()) {
-                best = doc.text();
+            // 8. 그래도 안 되면 전체 p 기반
+            String allP = doc.select("p")
+                    .stream()
+                    .map(el -> el.text().trim())
+                    .filter(s -> s.length() > 20)
+                    .distinct()
+                    .collect(Collectors.joining("\n"));
+
+            if (allP.length() >= 150) {
+                return cleanBodyText(allP);
             }
 
-            return best
-                    .replaceAll("(돌아가기\\s*)+", " ")
-                    .replaceAll("\\s{2,}", " ")
-                    .trim();
+            // 9. 최후 fallback: 전체 텍스트
+            return cleanBodyText(doc.text());
 
         } catch (Exception e) {
             log.warn("preExtractLikelyBody failed", e);
             return "";
         }
+    }
+
+    private String cleanBodyText(String text) {
+        if (text == null) return "";
+        return text
+                .replaceAll("저작권자.?\\s*©?.*?무단전재.*?(금지)?", " ")
+                .replaceAll("이 기사를 공유합니다.*", " ")
+                .replaceAll("SNS 기사보내기.*", " ")
+                .replaceAll("공유하기.*", " ")
+                .replaceAll("(돌아가기\\s*)+", " ")
+                .replaceAll("\\s{2,}", " ")
+                .trim();
     }
 }
