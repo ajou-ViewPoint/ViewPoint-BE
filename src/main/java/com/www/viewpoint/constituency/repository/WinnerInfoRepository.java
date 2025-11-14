@@ -13,13 +13,43 @@ import java.util.List;
 public interface WinnerInfoRepository extends JpaRepository<WinnerInfo, Long> {
 
     @Query("""
+   SELECT new com.www.viewpoint.constituency.model.dto.WinnerInfoDto(
+            wi.eraco,
+            wi.name,
+            wi.jdName,
+            wi.sggName,
+            kd.sidoName,
+            kd.sggName,
+            kd.code,
+            wi.dugyul,
+            p.partyName,
+            am.id,
+            am.profileImage
+       )
+    FROM WinnerInfo wi
+    LEFT JOIN Party p ON wi.partyId = p.id
+    LEFT JOIN AssemblyMember am ON wi.memberId = am.id
+    LEFT JOIN KoreaDistrict  kd ON wi.regionId = kd.id
+    WHERE (:sido IS NULL OR kd.sidoName = :sido)
+      AND (:sgg IS NULL OR kd.sggName = :sgg)
+      AND (:code IS NULL OR kd.code = :code)
+    ORDER BY wi.eraco DESC
+""")
+    List<WinnerInfoDto> findMembersByRegion(
+            @Param("sido") String sido,
+            @Param("sgg") String sgg,
+            @Param("code") String  code
+    );
+
+    @Query("""
         SELECT new com.www.viewpoint.constituency.model.dto.WinnerInfoDto(
             wi.eraco,
             wi.name,
             wi.jdName,
             wi.sggName,
-            wi.sdName,
-            wi.wiwName,
+            kr.sidoName,
+            kr.sggName,
+            kr.code,
             wi.dugyul,
             p.partyName,
             am.id,
@@ -28,14 +58,9 @@ public interface WinnerInfoRepository extends JpaRepository<WinnerInfo, Long> {
         FROM WinnerInfo wi
         LEFT JOIN Party p ON wi.partyId = p.id
         LEFT JOIN AssemblyMember am ON wi.memberId = am.id
-        WHERE (:sido IS NULL OR wi.sdName LIKE CONCAT('%', :sido, '%'))
-          AND (:gungu IS NULL OR wi.wiwName LIKE CONCAT('%', :gungu, '%'))
-          AND (:eracos IS NULL OR wi.eraco = :eracos)
+        LEFT JOIN KoreaDistrict  kr ON wi.regionId =kr.id
+        WHERE wi.regionId = :regionId
         ORDER BY wi.eraco DESC
     """)
-    List<WinnerInfoDto> findMembersByRegion(
-            @Param("sido") String sido,
-            @Param("gungu") String gungu,
-            @Param("eracos") String eracos
-    );
+    List<WinnerInfoDto> findWinnerByRegionId(@Param("regionId") Long regionId);
 }

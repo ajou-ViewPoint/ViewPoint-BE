@@ -48,4 +48,6 @@ public class WinnerInfo {
 
     @Column(name = "member_id")
     private Long memberId;
+    @Column(name = "region_id")
+    private Long regionId;
 }

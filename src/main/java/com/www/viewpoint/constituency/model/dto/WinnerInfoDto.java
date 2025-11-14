@@ -14,8 +14,9 @@ public class WinnerInfoDto {
     private String memberName;
     private String partyName;
     private String electionDistrict;
-    private String sdName;
-    private String wiwName;
+    private String sidoName;
+    private String sggName;
+    private String regionCd;
     private BigDecimal voteRate;
     private String normalizedPartyName;
     private Integer memberId;          // ✅ 추가
