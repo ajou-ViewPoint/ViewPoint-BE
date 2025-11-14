@@ -12,13 +12,15 @@ public class AssemblyMemberSummaryDto {
 
     private Integer id;
     private String name;
+    private String party;
     private String duty;
-
+    private String profileImage;
     public static AssemblyMemberSummaryDto fromEntity(AssemblyMember assemblyMember) {
         return AssemblyMemberSummaryDto.builder()
                 .id(assemblyMember.getId())
                 .name(assemblyMember.getName())
-                .duty(assemblyMember.getDuty())
+                .party(assemblyMember.getParty())
+                .profileImage(assemblyMember.getProfileImage())
                 .build();
     }
 }
