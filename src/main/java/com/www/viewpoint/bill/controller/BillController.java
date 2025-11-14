@@ -119,7 +119,7 @@ public class BillController {
                 법안에 대해 찬성/반대/기권/불참한 국회의원 리스트를 반환합니다.
                 
                 예시 요청:
-                GET /v1/bills/ARC_A1D6N0F9G0E9M1T7F4B8E3C0T6E9E33/votes
+                GET /v1/bills/ARC_A1D6N0F9G0E9M1T7F4B8E3C0T6E9E3/votes
                 """
     )
     @ApiResponses({
@@ -128,10 +128,11 @@ public class BillController {
     })
     @GetMapping("/{billId}/votes")
     public ResponseEntity<BillVoteSummaryDto>  getBillVoteSummary(
-            @PathVariable @Parameter(description = "법안의 billId (ARC_xxx 형식)") String billId
+            @PathVariable @Parameter(description = "법안의 billId (ARC_xxx 형식)",example ="ARC_A1D6N0F9G0E9M1T7F4B8E3C0T6E9E3") String billId
     ) {
         BillVoteSummaryDto summary = billService.getBillVoteResult(billId);
-// 데이터가 완전히 비었으면 404로 반환 (선택)
+
+        // 데이터가 완전히 비었으면 404로 반환 (선택)
         if (summary.getAgree().isEmpty() &&
                 summary.getDisagree().isEmpty() &&
                 summary.getAbstain().isEmpty() &&
@@ -139,6 +140,7 @@ public class BillController {
 
             return ResponseEntity.notFound().build();
         }
+
        return ResponseEntity.ok(summary);
     }
 }
