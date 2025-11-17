@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface BillRepository extends JpaRepository<Bill, Integer> {
@@ -20,4 +21,6 @@ public interface BillRepository extends JpaRepository<Bill, Integer> {
     );
 
     List<Bill> findByProposeDtBetween(LocalDate startDate, LocalDate endDate);
+
+    Bill findByBillId(String billId);
 }

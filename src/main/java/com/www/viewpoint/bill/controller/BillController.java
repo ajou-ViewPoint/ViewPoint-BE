@@ -47,15 +47,18 @@ public class BillController {
 
     @Operation(
             summary = "ID로 법안 조회",
-            description = "특정 ID의 법안을 반환합니다. 예시: /v1/bills/123"
+            description = "특정 ID의 법안을 반환합니다. 예시: /v1/bills/PRC_Z2Z3C0L1D1G3J1M0A4C8S0V0T8B5N2"
     )
-    @GetMapping("/{id}")
+    @GetMapping("/{billId}")
     public ResponseEntity<Bill> getBillById(
-            @Parameter(description = "조회할 법안의 ID", example = "123")
-            @PathVariable Integer id) {
-        return billService.getBillById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+            @Parameter(description = "조회할 법안의 ID", example = "PRC_Z2Z3C0L1D1G3J1M0A4C8S0V0T8B5N2")
+            @PathVariable String billId) {
+        var bill = billService.getBillById(billId);
+        if (bill == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(billService.getBillById(billId));
+
     }
 
     @Operation(
@@ -103,8 +106,8 @@ public class BillController {
     )
     @GetMapping("/{billId}/proposers")
     public ResponseEntity<List<BillProposerMemberDto>> getProposersByBillId(
-            @Parameter(description = "법안 ID", example = "123")
-            @PathVariable Long billId
+            @Parameter(description = "법안 ID", example = "PRC_Z2Z3C0L1D1G3J1M0A4C8S0V0T8B5N2")
+            @PathVariable String  billId
     ) {
         List<BillProposerMemberDto> proposers = billService.getProposersByBillId(billId);
         if (proposers.isEmpty()) {
@@ -119,7 +122,7 @@ public class BillController {
                 법안에 대해 찬성/반대/기권/불참한 국회의원 리스트를 반환합니다.
                 
                 예시 요청:
-                GET /v1/bills/ARC_A1D6N0F9G0E9M1T7F4B8E3C0T6E9E3/votes
+                GET /v1/bills/PRC_Z2Z3C0L1D1G3J1M0A4C8S0V0T8B5N2/votes
                 """
     )
     @ApiResponses({
@@ -128,7 +131,7 @@ public class BillController {
     })
     @GetMapping("/{billId}/votes")
     public ResponseEntity<BillVoteSummaryDto>  getBillVoteSummary(
-            @PathVariable @Parameter(description = "법안의 billId (ARC_xxx 형식)",example ="ARC_A1D6N0F9G0E9M1T7F4B8E3C0T6E9E3") String billId
+            @PathVariable @Parameter(description = "법안의 billId (ARC_xxx 형식)",example ="PRC_Z2Z3C0L1D1G3J1M0A4C8S0V0T8B5N2") String billId
     ) {
         BillVoteSummaryDto summary = billService.getBillVoteResult(billId);
 

@@ -68,11 +68,11 @@ public class BillService {
         return new BillVoteSummaryDto(agree, disagree, abstain, absent);
     }
 
-    public List<BillProposerMemberDto> getProposersByBillId(Long billId) {
-        return billProposerRepository.findProposersByBillDbId(billId);
+    public List<BillProposerMemberDto> getProposersByBillId(String billId) {
+        return billProposerRepository.findProposersByBillId(billId);
     }
-    public Optional<Bill> getBillById(Integer id) {
-        return billRepository.findById(id);
+    public Bill getBillById(String id) {
+        return billRepository.findByBillId(id);
     }
 
     public List<Bill> searchBillsByKeyword(String keyword) {
