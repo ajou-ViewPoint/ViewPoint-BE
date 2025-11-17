@@ -33,11 +33,11 @@ public interface BillProposerRepository extends JpaRepository<BillProposer, Inte
                    LEFT JOIN AssemblyMember am ON bp.memberId = am.id
                    LEFT JOIN AssemblyMemberEraco ame ON ame.memberId = bp.memberId AND ame.eraco = bp.eraco
                    LEFT JOIN Party p ON ame.partyId = p.id
-                   WHERE b.id = :billDbId
+                   WHERE b.billId = :billId
                    ORDER BY bp.isRepresentative DESC, am.name ASC
         """
         )
-    List<BillProposerMemberDto> findProposersByBillDbId(@Param("billDbId") Long billDbId);
+    List<BillProposerMemberDto> findProposersByBillId(@Param("billId") String billId);
 
     @Query("""
         SELECT new com.www.viewpoint.bill.model.dto.BillSummaryDto(
@@ -56,5 +56,6 @@ public interface BillProposerRepository extends JpaRepository<BillProposer, Inte
             @Param("memberId") Integer memberId,
             Pageable pageable
     );
+
 
 }
