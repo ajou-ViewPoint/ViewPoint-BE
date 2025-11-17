@@ -14,7 +14,9 @@ public class CorsConfig implements WebMvcConfigurer {
                         "http://localhost:5173",
                         "http://127.0.0.1:5173",
                         "https://viewpoint.io.kr",
-                        "https://www.viewpoint.io.kr"
+                        "https://www.viewpoint.io.kr",
+                        "https://be.viewpoint.io.kr",
+                        "http://localhost:8080"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 .allowedHeaders("*")
