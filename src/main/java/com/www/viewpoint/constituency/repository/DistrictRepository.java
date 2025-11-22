@@ -39,4 +39,16 @@ public interface DistrictRepository extends JpaRepository<KoreaDistrict, Long> {
             nativeQuery = true
     )
     Optional<KoreaDistrict> findSggByCodePrefix(@Param("sggCode") String sggCode);
+
+    @Query(
+            value = """
+        SELECT *
+        FROM korea_districts
+        WHERE CHAR_LENGTH(code) = 5
+        ORDER BY RAND()
+        LIMIT 1
+        """,
+            nativeQuery = true
+    )
+    Optional<KoreaDistrict> findRandomSggCode();
 }
