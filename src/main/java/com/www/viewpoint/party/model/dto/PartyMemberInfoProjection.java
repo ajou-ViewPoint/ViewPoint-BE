@@ -6,6 +6,7 @@ public interface PartyMemberInfoProjection {
     String getDuty();
     String getName();
     String getProfileImage();
+    String getDistrict();
     String getConstituencyType();
-    String getRegionName();
+    Integer getAge();
 }

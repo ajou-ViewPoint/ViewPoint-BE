@@ -1,7 +1,7 @@
 package com.www.viewpoint.bill.model.dto;
 
 
-import com.www.viewpoint.assemblymember.dto.AssemblyMemberSummaryDto;
+import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 

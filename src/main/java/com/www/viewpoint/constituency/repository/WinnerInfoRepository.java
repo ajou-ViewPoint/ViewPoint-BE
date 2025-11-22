@@ -13,27 +13,27 @@ import java.util.List;
 public interface WinnerInfoRepository extends JpaRepository<WinnerInfo, Long> {
 
     @Query("""
-   SELECT new com.www.viewpoint.constituency.model.dto.WinnerInfoDto(
-            wi.eraco,
-            wi.name,
-            wi.jdName,
-            wi.sggName,
-            kd.sidoName,
-            kd.sggName,
-            kd.code,
-            wi.dugyul,
-            p.partyName,
-            am.id,
-            am.profileImage
-       )
-    FROM WinnerInfo wi
-    LEFT JOIN Party p ON wi.partyId = p.id
-    LEFT JOIN AssemblyMember am ON wi.memberId = am.id
-    LEFT JOIN KoreaDistrict  kd ON wi.regionId = kd.id
-    WHERE (:sido IS NULL OR kd.sidoName = :sido)
-      AND (:sgg IS NULL OR kd.sggName = :sgg)
-      AND (:code IS NULL OR kd.code = :code)
-    ORDER BY wi.eraco DESC
+        SELECT new com.www.viewpoint.constituency.model.dto.WinnerInfoDto(
+            am.id,                
+            wi.name,              
+            p.partyName,          
+            am.age,               
+            am.duty,              
+            am.profileImage,      
+            kd.sggName,           
+            kd.sidoName,          
+            kd.sggName,           
+            kd.code,             
+            wi.dugyul             
+        )
+        FROM WinnerInfo wi
+        LEFT JOIN Party p ON wi.partyId = p.id
+        LEFT JOIN AssemblyMember am ON wi.memberId = am.id
+        LEFT JOIN KoreaDistrict kd ON wi.regionId = kd.id
+        WHERE (:sido IS NULL OR kd.sidoName = :sido)
+          AND (:sgg IS NULL OR kd.sggName = :sgg)
+          AND (:code IS NULL OR kd.code = :code)
+        ORDER BY wi.eraco DESC
 """)
     List<WinnerInfoDto> findMembersByRegion(
             @Param("sido") String sido,
@@ -42,23 +42,23 @@ public interface WinnerInfoRepository extends JpaRepository<WinnerInfo, Long> {
     );
 
     @Query("""
-        SELECT new com.www.viewpoint.constituency.model.dto.WinnerInfoDto(
-            wi.eraco,
-            wi.name,
-            wi.jdName,
-            wi.sggName,
-            kr.sidoName,
-            kr.sggName,
-            kr.code,
-            wi.dugyul,
-            p.partyName,
-            am.id,
-            am.profileImage
+         SELECT new com.www.viewpoint.constituency.model.dto.WinnerInfoDto(
+            am.id,                
+            wi.name,              
+            p.partyName,          
+            am.age,               
+            am.duty,              
+            am.profileImage,      
+            kd.sggName,           
+            kd.sidoName,          
+            kd.sggName,           
+            kd.code,             
+            wi.dugyul             
         )
         FROM WinnerInfo wi
         LEFT JOIN Party p ON wi.partyId = p.id
         LEFT JOIN AssemblyMember am ON wi.memberId = am.id
-        LEFT JOIN KoreaDistrict  kr ON wi.regionId =kr.id
+        LEFT JOIN KoreaDistrict  kd ON wi.regionId =kd.id
         WHERE wi.regionId = :regionId
         ORDER BY wi.eraco DESC
     """)

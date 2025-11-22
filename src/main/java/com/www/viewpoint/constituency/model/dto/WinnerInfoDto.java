@@ -1,24 +1,39 @@
 package com.www.viewpoint.constituency.model.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 
-@Data
-@AllArgsConstructor
+
+@Getter
+@Setter
+@SuperBuilder
 @NoArgsConstructor
-public class WinnerInfoDto {
-    private String eraco;
-    private String memberName;
-    private String partyName;
-    private String electionDistrict;
+public class WinnerInfoDto extends AssemblyMemberSummaryDto {
     private String sidoName;
     private String sggName;
     private String regionCd;
     private BigDecimal voteRate;
-    private String normalizedPartyName;
-    private Integer memberId;          // ✅ 추가
-    private String profileImage;    // ✅ 추가
+
+    public WinnerInfoDto(
+            Integer id,
+            String name,
+            String party,
+            Integer age,
+            String duty,
+            String profileImage,
+            String district,
+            String sidoName,
+            String sggName,
+            String regionCd,
+            BigDecimal voteRate
+    ) {
+        super(id.longValue(), name, party, age, duty, profileImage, district);
+        this.sidoName = sidoName;
+        this.sggName = sggName;
+        this.regionCd = regionCd;
+        this.voteRate = voteRate;
+    }
 }

@@ -1,18 +1,17 @@
 package com.www.viewpoint.share.dto;
 
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.Builder;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @Setter
-@Builder
+@SuperBuilder
+@NoArgsConstructor
 @AllArgsConstructor
 public class AssemblyMemberSummaryDto {
 
-    private Long id;
+    private Long memberId;
     private String name;
     private String party;
     private Integer age;
