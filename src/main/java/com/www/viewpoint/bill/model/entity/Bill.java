@@ -76,4 +76,10 @@ public class Bill {
 
     @Column(name = "age")
     private Integer age;
+
+    @Column(name = "announce_dt")
+    private LocalDate announceDt;
+
+    @Column(name = "curr_trans_dt")
+    private LocalDate currTransDt;
 }

@@ -102,7 +102,4 @@ public class BillService {
         }
         return billRepository.findByProposeDtBetween(startDate, endDate);
     }
-
-
-
 }
