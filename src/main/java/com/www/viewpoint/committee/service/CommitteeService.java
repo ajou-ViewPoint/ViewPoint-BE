@@ -4,6 +4,7 @@ import com.www.viewpoint.committee.dto.MemberWithRole;
 import com.www.viewpoint.committee.dto.MemberWithRoleProjection;
 import com.www.viewpoint.committee.model.entity.Committee;
 import com.www.viewpoint.committee.repository.CommitteeRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -34,14 +35,11 @@ public class CommitteeService {
         return committeeRepository.findById(id);
     }
 
-    public Optional<Map<String,Object>> getCommitteeMembersAndStats(String committeeName) {
-        Optional<Committee> opt = committeeRepository.findByCommitteeName(committeeName);
-        if (opt.isEmpty()) {
-            return Optional.empty();
-        }
+    public Optional<Map<String,Object>> getCommitteeMembersAndStats(Integer committeeId) {
 
-        Committee committee = opt.get();
-        Integer committeeId = committee.getId();
+        Committee committee = committeeRepository.findById(committeeId).orElseThrow(
+                () -> new EntityNotFoundException("Committee not found with id: " + committeeId)
+        );
 
         List<MemberWithRoleProjection> rawMembers = committeeRepository.findMembersByCommitteeId(committeeId);
 
