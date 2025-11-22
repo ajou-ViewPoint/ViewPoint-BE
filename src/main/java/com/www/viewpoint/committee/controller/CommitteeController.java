@@ -60,7 +60,7 @@ public class CommitteeController {
             summary = "위원회 상세 (구성원 + 정당 통계)",
             description = """
                     committee_name을 기준으로 위원회 멤버 전체와 정당 분포 통계를 반환합니다.
-                    예시: /v1/committees/detail?name=기후위기 특별위원회
+                    예시: /v1/committees/detail?id=0
                     
                     응답:
                     {
@@ -84,10 +84,10 @@ public class CommitteeController {
     )
     @GetMapping("/detail")
     public ResponseEntity<Map<String,Object>> getCommitteeDetail(
-            @Parameter(description = "위원회 이름 (committee_name과 일치)", example = "기후위기 특별위원회")
-            @RequestParam("name") String committeeName
+            @Parameter(description = "위원회 아이디로 조회", example = "3")
+            @RequestParam("id") Integer id
     ) {
-        Optional<Map<String,Object>> result = committeeService.getCommitteeMembersAndStats(committeeName);
+        Optional<Map<String,Object>> result = committeeService.getCommitteeMembersAndStats(id);
         return result
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
