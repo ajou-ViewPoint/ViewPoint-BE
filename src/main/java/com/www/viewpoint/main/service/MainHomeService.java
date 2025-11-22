@@ -6,6 +6,7 @@ import com.www.viewpoint.assemblymember.model.entity.AssemblyMember;
 import com.www.viewpoint.assemblymember.repository.AssemblyMemberRepository;
 import com.www.viewpoint.main.dto.MemberSimpleDto;
 import com.www.viewpoint.main.dto.MainHomeResponse;
+import com.www.viewpoint.main.repository.MemberSimpleProjection;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -17,7 +18,8 @@ public class MainHomeService {
     private final RecentBillService recentBillService;
     private final AssemblyMemberRepository assemblyMemberRepository;
 
-    public MainHomeService(RecentBillService recentBillService, AssemblyMemberRepository assemblyMemberRepository) {
+    public MainHomeService(RecentBillService recentBillService,
+                           AssemblyMemberRepository assemblyMemberRepository) {
         this.recentBillService = recentBillService;
         this.assemblyMemberRepository = assemblyMemberRepository;
     }
@@ -27,13 +29,13 @@ public class MainHomeService {
     }
 
     private List<MemberSimpleDto> pickRandomMembersForAge(Integer age) {
-        List<AssemblyMember> members =
+        List<MemberSimpleProjection> members =
                 (age != null && age > 0)
-                        ? assemblyMemberRepository.findRandomByAgeLimit8(age)
-                        : assemblyMemberRepository.findRandomLimit8();
+                        ? assemblyMemberRepository.findRandomByAgeLimit8WithDistrict(age)
+                        : assemblyMemberRepository.findRandomLimit8WithDistrict();
 
         if (members == null || members.isEmpty()) { // fallback
-            members = assemblyMemberRepository.findRandomLimit8();
+            members = assemblyMemberRepository.findRandomLimit8WithDistrict();
         }
 
         return members.stream()
@@ -41,11 +43,11 @@ public class MainHomeService {
                         .naasCode(m.getNaasCode())
                         .name(m.getName())
                         .profileImage(m.getProfileImage())
+                        .district(m.getDistrict())   // 여기서 district 세팅
                         .build())
                 .toList();
     }
 
-    // 3) 메인 홈 응답
     public MainHomeResponse getMainHomeData() {
         List<Bill> recentBills = pickRecentBillsTop3();
         Integer targetAge = recentBills.isEmpty() ? null : recentBills.get(0).getAge();

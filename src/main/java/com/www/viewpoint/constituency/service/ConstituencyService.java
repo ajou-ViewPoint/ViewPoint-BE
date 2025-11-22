@@ -60,5 +60,12 @@ public class ConstituencyService {
     public Optional<Constituency> getConstituencyById(Integer id) {
         return constituencyRepository.findById(id);
     }
+
+    public String getRandomDistrictCode() {
+        KoreaDistrict district = districtRepository.findRandomSggCode()
+                .orElseThrow(() -> new IllegalStateException("5자리 지역 코드가 없습니다."));
+
+        return district.getCode();  // 여기서 code만 리턴!
+    }
 }
 
