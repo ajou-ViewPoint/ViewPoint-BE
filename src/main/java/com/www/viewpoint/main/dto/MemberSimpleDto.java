@@ -14,4 +14,5 @@ public class MemberSimpleDto {
     private String naasCode;
     private String name;
     private String profileImage;
+    private String district;
 }

@@ -1,6 +1,8 @@
 package com.www.viewpoint.bill.repository;
 import com.www.viewpoint.bill.model.entity.Bill;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -23,4 +25,12 @@ public interface BillRepository extends JpaRepository<Bill, Integer> {
     List<Bill> findByProposeDtBetween(LocalDate startDate, LocalDate endDate);
 
     Bill findByBillId(String billId);
+
+    @Query("""
+    SELECT b
+    FROM Bill b
+    WHERE b.rgsProcDate IS NOT NULL
+    ORDER BY b.rgsProcDate DESC, b.id DESC
+""")
+    List<Bill> findTop3ByRgsProcDateDesc(Pageable pageable);
 }
