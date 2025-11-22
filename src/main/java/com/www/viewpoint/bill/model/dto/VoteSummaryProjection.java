@@ -7,5 +7,6 @@ public interface VoteSummaryProjection {
     String getDuty();
     String getPartyName();
     String getProfileImage();
+    String getElectionDistrict();
     String getVoteOpinion();
 }

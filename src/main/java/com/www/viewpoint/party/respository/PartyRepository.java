@@ -37,7 +37,8 @@ public interface PartyRepository extends JpaRepository<Party, Integer> {
         nam.name AS name,
         nam.profile_image AS profileImage,
         ae.constituency_type AS constituencyType,
-        ae.election_district AS regionName
+        ae.election_district AS district,
+        ae.age AS age
     FROM national_assembly_member nam
     JOIN assembly_member_eraco ae ON ae.member_id = nam.id
     JOIN party p ON p.id = ae.party_id

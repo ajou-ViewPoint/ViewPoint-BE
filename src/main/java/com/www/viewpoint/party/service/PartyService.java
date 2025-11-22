@@ -3,6 +3,7 @@ package com.www.viewpoint.party.service;
 import com.www.viewpoint.party.model.dto.*;
 import com.www.viewpoint.party.model.entity.Party;
 import com.www.viewpoint.party.respository.PartyRepository;
+import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class PartyService {
@@ -41,8 +43,20 @@ public class PartyService {
     }
 
     public PartyMemberSummaryDto getPartyMemberSummary(String partyName, String eraco) {
-        List<PartyMemberInfoProjection> members =
-                partyRepository.findAllByPartyAndEracoIncludingSatellite(partyName, eraco);
+        List<AssemblyMemberSummaryDto> members =
+        partyRepository.findAllByPartyAndEracoIncludingSatellite(partyName, eraco)
+                .stream()
+                .map(it -> AssemblyMemberSummaryDto.builder()
+                        .memberId(it.getMemberId().longValue())
+                        .name(it.getName())
+                        .party(it.getPartyName())   // 실제 컬럼명에 맞게 수정
+                        .age(it.getAge())
+                        .duty(it.getDuty())
+                        .profileImage(it.getProfileImage())
+                        .district(it.getDistrict()) // 실제 필드명에 맞춰 변경
+                        .build()
+                )
+                .collect(Collectors.toList());
 
         if (members.isEmpty()) {
             return new PartyMemberSummaryDto(0, 0, 0, List.of());
@@ -50,7 +64,7 @@ public class PartyService {
 
         long total = members.size();
         long proportional = members.stream()
-                .filter(m -> "비례대표".equalsIgnoreCase(m.getConstituencyType()))
+                .filter(m -> "비례대표".equalsIgnoreCase(m.getDistrict()))
                 .count();
         long district = total - proportional;
 

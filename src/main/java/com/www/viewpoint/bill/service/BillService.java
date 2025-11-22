@@ -1,6 +1,6 @@
 package com.www.viewpoint.bill.service;
 
-import com.www.viewpoint.assemblymember.dto.AssemblyMemberSummaryDto;
+import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
 import com.www.viewpoint.bill.model.dto.BillProposerMemberDto;
 import com.www.viewpoint.bill.model.dto.BillVoteSummaryDto;
 import com.www.viewpoint.bill.model.dto.VoteSummaryProjection;
@@ -54,7 +54,8 @@ public class BillService {
                             v.getPartyName(),
                             v.getAge(),
                             v.getDuty(),
-                            v.getProfileImage()
+                            v.getProfileImage(),
+                            v.getElectionDistrict()
                     );
 
             switch (v.getVoteOpinion()) {

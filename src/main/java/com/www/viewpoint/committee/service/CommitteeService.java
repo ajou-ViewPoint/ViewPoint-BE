@@ -1,6 +1,7 @@
 package com.www.viewpoint.committee.service;
 
 import com.www.viewpoint.committee.dto.MemberWithRole;
+import com.www.viewpoint.committee.dto.MemberWithRoleProjection;
 import com.www.viewpoint.committee.model.entity.Committee;
 import com.www.viewpoint.committee.repository.CommitteeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,24 +43,26 @@ public class CommitteeService {
         Committee committee = opt.get();
         Integer committeeId = committee.getId();
 
-        List<MemberWithRole> rawMembers = committeeRepository.findMembersByCommitteeId(committeeId);
+        List<MemberWithRoleProjection> rawMembers = committeeRepository.findMembersByCommitteeId(committeeId);
 
-        Map<String, List<Map<String,Object>>> roleBuckets = new LinkedHashMap<>();
+        Map<String, List<MemberWithRole>> roleBuckets = new LinkedHashMap<>();
 
-        for (MemberWithRole m : rawMembers) {
-            String role = (m.getRole() == null || m.getRole().isBlank())
+        for (MemberWithRoleProjection r : rawMembers) {
+            String role = (r.getRole() == null || r.getRole().isBlank())
                     ? "위원"
-                    : m.getRole();
-
+                    : r.getRole();
+            MemberWithRole m = MemberWithRole.builder()
+                    .memberId(r.getMemberId())
+                    .role(role)
+                    .name(r.getName())
+                    .age(r.getAge())
+                    .duty(r.getDuty())
+                    .party(r.getPartyName())
+                    .district(r.getElectionDistrict())
+                    .profileImage(r.getProfileImage())
+                    .build();
             roleBuckets.computeIfAbsent(role, k -> new ArrayList<>())
-                    .add(Map.of(
-                            "memberId",     m.getMemberId(),
-                            "name",         m.getName(),
-                            "party",        m.getParty(),
-                            "profileImage", m.getProfileImage(),
-                            "naasCode",     m.getNaasCode(),
-                            "age",          m.getAge()
-                    ));
+                    .add(m);
         }
 
         List<Object[]> partyCounts = committeeRepository.countPartyDistribution(committeeId);

@@ -1,13 +1,15 @@
 package com.www.viewpoint.committee.dto;
 
-public interface MemberWithRole {
-    Integer getMemberId();
-    String getRole();
+import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
-    // 의원 정보
-    String getName();
-    String getParty();
-    String getProfileImage();
-    String getNaasCode();
-    Integer getAge();
+
+@Getter
+@Setter
+@SuperBuilder
+@NoArgsConstructor
+@AllArgsConstructor
+public class MemberWithRole extends AssemblyMemberSummaryDto {
+   String role;
 }
