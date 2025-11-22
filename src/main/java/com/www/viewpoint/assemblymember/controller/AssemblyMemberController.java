@@ -1,5 +1,6 @@
 package com.www.viewpoint.assemblymember.controller;
 
+import com.www.viewpoint.assemblymember.model.dto.AssemblyMemberDto;
 import com.www.viewpoint.assemblymember.model.entity.AssemblyMember;
 import com.www.viewpoint.assemblymember.service.AssemblyMemberService;
 import com.www.viewpoint.bill.model.dto.BillSummaryDto;
@@ -45,12 +46,11 @@ public class AssemblyMemberController {
             description = "특정 ID의 국회의원을 반환합니다. 예시: /v1/assemblymembers/10"
     )
     @GetMapping("/{id}")
-    public ResponseEntity<AssemblyMember> getAssemblyMemberById(
+    public ResponseEntity<AssemblyMemberDto> getAssemblyMemberById(
             @Parameter(description = "조회할 국회의원의 ID", example = "10")
             @PathVariable Long id) {
-        return assemblyMemberService.getAssemblyMemberById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(assemblyMemberService.getAssemblyMemberById(id));
+
     }
 
 

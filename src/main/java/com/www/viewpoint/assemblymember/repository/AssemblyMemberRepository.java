@@ -1,12 +1,14 @@
 package com.www.viewpoint.assemblymember.repository;
 
 import com.www.viewpoint.assemblymember.model.entity.AssemblyMember;
-import com.www.viewpoint.main.dto.MemberSimpleDto;
+import com.www.viewpoint.assemblymember.model.dto.AssemblyMemberQueryProjection;
 import com.www.viewpoint.main.repository.MemberSimpleProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface AssemblyMemberRepository extends JpaRepository<AssemblyMember, Long> {
     @Query(
@@ -51,4 +53,53 @@ public interface AssemblyMemberRepository extends JpaRepository<AssemblyMember, 
         LIMIT 8
         """, nativeQuery = true)
     List<MemberSimpleProjection> findRandomLimit8WithDistrict();
+
+
+    @Query(value = """
+        SELECT
+            n.id AS memberId,
+            n.name AS name,
+            le.party_name AS party,
+            le.age AS age,
+            n.duty AS duty,
+            n.profile_image AS profileImage,
+            le.election_district AS district,
+            -- AssemblyMemberDto 필드들
+            n.eng_name AS engName,
+            n.ch_name AS chName,
+            n.birth_date AS birthDate,
+            n.gender AS gender,
+            n.phone AS phone,
+            n.inner_duty AS innerDuty,
+            n.attendance_rate AS attendanceRate,
+            n.loyalty_rate AS loyaltyRate,
+            n.history AS history
+        FROM national_assembly_member n
+        LEFT JOIN (
+            SELECT
+                t.member_id,
+                t.age,
+                t.election_district,
+                t.party_name
+            FROM (
+                SELECT
+                    ame.member_id,
+                    ame.age,
+                    ame.election_district,
+                    p.party_name AS party_name,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY ame.member_id
+                        ORDER BY ame.age DESC
+                    ) AS rn
+                FROM assembly_member_eraco ame
+                LEFT JOIN party p
+                    ON ame.party_id = p.id
+            ) t
+            WHERE t.rn = 1
+        ) le
+            ON le.member_id = n.id
+        WHERE n.id = :id
+        """,
+            nativeQuery = true)
+    Optional<AssemblyMemberQueryProjection> findAssemblyMemberById(@Param("id") Long id);
 }
