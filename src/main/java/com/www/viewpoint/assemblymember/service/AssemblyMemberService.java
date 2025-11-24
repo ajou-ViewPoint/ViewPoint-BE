@@ -6,6 +6,7 @@ import com.www.viewpoint.assemblymember.model.dto.AssemblyMemberQueryProjection;
 import com.www.viewpoint.assemblymember.repository.AssemblyMemberRepository;
 import com.www.viewpoint.bill.model.dto.BillSummaryDto;
 import com.www.viewpoint.bill.repository.BillProposerRepository;
+import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,12 +22,24 @@ public class AssemblyMemberService {
     private final AssemblyMemberRepository assemblyMemberRespotiroy;
     private final BillProposerRepository billProposerRespotiroy;
 
+    private AssemblyMemberSummaryDto toSummaryDto(AssemblyMemberQueryProjection p) {
+        return AssemblyMemberSummaryDto.builder()
+                .memberId(p.getMemberId())
+                .name(p.getName())
+                .party(p.getParty())
+                .age(p.getAge())
+                .duty(p.getDuty())
+                .profileImage(p.getProfileImage())
+                .district(p.getDistrict())
+                .build();
+    }
 
-
-    public Page<AssemblyMember> getAssemblyMemberAll(int page, int size, String sortBy, String direction) {
+    public Page<AssemblyMemberSummaryDto> getAssemblyMemberAll(int page, int size, String sortBy, String direction) {
         Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
-        return assemblyMemberRespotiroy.findAll(pageable);
+        return assemblyMemberRespotiroy.findAllAssemblyMembers(pageable)
+                .map(this::toSummaryDto);
+
     }
 
     public AssemblyMemberDto getAssemblyMemberById(Long id) {

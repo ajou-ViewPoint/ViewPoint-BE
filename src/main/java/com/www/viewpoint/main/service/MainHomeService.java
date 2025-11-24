@@ -7,10 +7,13 @@ import com.www.viewpoint.assemblymember.repository.AssemblyMemberRepository;
 import com.www.viewpoint.main.dto.MemberSimpleDto;
 import com.www.viewpoint.main.dto.MainHomeResponse;
 import com.www.viewpoint.main.repository.MemberSimpleProjection;
+import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
+import com.www.viewpoint.share.dto.AssemblySummaryMemberProjection;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class MainHomeService {
@@ -28,8 +31,8 @@ public class MainHomeService {
         return recentBillService.getTop3RecentBills();
     }
 
-    private List<MemberSimpleDto> pickRandomMembersForAge(Integer age) {
-        List<MemberSimpleProjection> members =
+    private List<AssemblyMemberSummaryDto> pickRandomMembersForAge(Integer age) {
+        List<AssemblySummaryMemberProjection> members =
                 (age != null && age > 0)
                         ? assemblyMemberRepository.findRandomByAgeLimit8WithDistrict(age)
                         : assemblyMemberRepository.findRandomLimit8WithDistrict();
@@ -39,20 +42,24 @@ public class MainHomeService {
         }
 
         return members.stream()
-                .map(m -> MemberSimpleDto.builder()
-                        .naasCode(m.getNaasCode())
+                .map(m -> AssemblyMemberSummaryDto.builder()
+                        .memberId(m.getMemberId())
+                        .age(m.getAge())
+                        .duty(m.getDuty())
+                        .party(m.getParty())
                         .name(m.getName())
                         .profileImage(m.getProfileImage())
                         .district(m.getDistrict())   // 여기서 district 세팅
                         .build())
-                .toList();
+                .collect(Collectors.toList());
+
     }
 
     public MainHomeResponse getMainHomeData() {
         List<Bill> recentBills = pickRecentBillsTop3();
         Integer targetAge = recentBills.isEmpty() ? null : recentBills.get(0).getAge();
 
-        List<MemberSimpleDto> members = pickRandomMembersForAge(targetAge);
+        List<AssemblyMemberSummaryDto> members = pickRandomMembersForAge(targetAge);
 
         return MainHomeResponse.builder()
                 .recentBills(recentBills)

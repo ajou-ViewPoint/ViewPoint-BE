@@ -4,6 +4,7 @@ import com.www.viewpoint.assemblymember.model.dto.AssemblyMemberDto;
 import com.www.viewpoint.assemblymember.model.entity.AssemblyMember;
 import com.www.viewpoint.assemblymember.service.AssemblyMemberService;
 import com.www.viewpoint.bill.model.dto.BillSummaryDto;
+import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,7 +29,7 @@ public class AssemblyMemberController {
             description = "등록된 모든 국회 의원 정보를 페이지네이션과 정렬 옵션으로 조회합니다. 예시: /v1/assemblymembers?page=0&size=10&sortBy=name&direction=asc"
     )
     @GetMapping
-    public ResponseEntity<Page<AssemblyMember>> getAssemblyMembers(
+    public ResponseEntity<Page<AssemblyMemberSummaryDto>> getAssemblyMembers(
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지당 항목 수", example = "10")
@@ -37,7 +38,7 @@ public class AssemblyMemberController {
             @RequestParam(defaultValue = "id") String sortBy,
             @Parameter(description = "정렬 방향 (asc: 오름차순, desc: 내림차순)", example = "desc")
             @RequestParam(defaultValue = "desc") String direction) {
-        Page<AssemblyMember> assemblyMembers = assemblyMemberService.getAssemblyMemberAll(page, size, sortBy, direction);
+        Page<AssemblyMemberSummaryDto> assemblyMembers = assemblyMemberService.getAssemblyMemberAll(page, size, sortBy, direction);
         return ResponseEntity.ok(assemblyMembers);
     }
 
