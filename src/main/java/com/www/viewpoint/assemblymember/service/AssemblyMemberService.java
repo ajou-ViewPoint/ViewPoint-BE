@@ -62,4 +62,46 @@ public class AssemblyMemberService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
         return billProposerRespotiroy.findBillsByMemberId(memberId, pageable);
     }
+
+    private AssemblyMemberDto toDto(AssemblyMemberQueryProjection am) {
+        return AssemblyMemberDto.builder()
+                .memberId(am.getMemberId())
+                .name(am.getName())
+                .party(am.getParty())
+                .age(am.getAge())
+                .duty(am.getDuty())
+                .profileImage(am.getProfileImage())
+                .district(am.getDistrict())
+                .engName(am.getEngName())
+                .chName(am.getChName())
+                .birthDate(
+                        am.getBirthDate() != null ? am.getBirthDate().toString() : null
+                )
+                .gender(am.getGender())
+                .phone(am.getPhone())
+                .innerDuty(am.getInnerDuty())
+                .attendanceRate(am.getAttendanceRate())
+                .loyaltyRate(am.getLoyaltyRate())
+                .history(am.getHistory())
+                .build();
+    }
+
+    public Page<AssemblyMemberDto> filterAssemblyMembers(
+            String keyword,
+            String eraco,
+            int page,
+            int size,
+            String sortBy,
+            String direction
+    ) {
+        Sort.Direction sortDirection =
+                direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+
+        Page<AssemblyMemberQueryProjection> resultPage =
+                assemblyMemberRespotiroy.searchMembers(keyword, eraco, pageable);
+
+        return resultPage.map(this::toDto);
+    }
 }

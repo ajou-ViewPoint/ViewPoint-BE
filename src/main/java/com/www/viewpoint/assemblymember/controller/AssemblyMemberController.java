@@ -69,5 +69,38 @@ public class AssemblyMemberController {
         return ResponseEntity.ok(bills);
     }
 
+    @Operation(
+            summary = "국회의원 통합 필터 조회",
+            description = """
+                    검색어와 재직 대수 기준으로 국회의원을 필터링하여 조회합니다.
+                    - keyword: 이름 / 정당명 / 지역구에 대해 부분 검색
+                    - eraco: 재직 대수 (예: 제22대)
+                    예시: /v1/assemblymembers/filter?keyword=김&eraco=제22대&page=0&size=10
+                    """
+    )
+    @GetMapping("/filter")
+    public ResponseEntity<Page<AssemblyMemberDto>> filterAssemblyMembers(
+            @Parameter(description = "검색어 (이름, 정당, 지역구)", example = "김")
+            @RequestParam(required = false) String keyword,
+
+            @Parameter(description = "재직 대수 (예: 제22대)", example = "제22대")
+            @RequestParam(required = false) String eraco,
+
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+
+            @Parameter(description = "페이지당 항목 수", example = "10")
+            @RequestParam(defaultValue = "10") int size,
+
+            @Parameter(description = "정렬 기준 필드", example = "name")
+            @RequestParam(defaultValue = "name") String sortBy,
+
+            @Parameter(description = "정렬 방향 (asc/desc)", example = "asc")
+            @RequestParam(defaultValue = "asc") String direction
+    ) {
+        Page<AssemblyMemberDto> result =
+                assemblyMemberService.filterAssemblyMembers(keyword, eraco, page, size, sortBy, direction);
+        return ResponseEntity.ok(result);
+    }
 
 }

@@ -14,6 +14,7 @@ import java.util.Optional;
 public interface CommitteeRepository extends JpaRepository<Committee, Integer> {
 
     Optional<Committee> findByCommitteeName(String committeeName);
+    List<Committee> findByCommitteeNameContainingIgnoreCase(String committeeName);
 
     // 1) 위원회별 의원 상세 (역할 포함)
     @Query(value = """

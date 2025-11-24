@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 @Tag(name = "Bills API", description = "법안(Bill) 관련 API")
 @RestController
@@ -26,6 +27,17 @@ import java.util.List;
 public class BillController {
 
     private final BillService billService;
+
+    private static final Set<String> ALLOWED_PROC_RESULT_CODES = Set.of(
+            "대안반영폐기",
+            "부결",
+            "불성립",
+            "수정가결",
+            "수정안반영폐기",
+            "원안가결",
+            "임기만료폐기",
+            "철회"
+    );
 
     @Operation(
             summary = "전체 법안 조회",
@@ -145,5 +157,94 @@ public class BillController {
         }
 
        return ResponseEntity.ok(summary);
+    }
+
+
+    @Operation(
+            summary = "복합 필터 기반 법안 검색",
+            description = """
+                    아래 필터 중 하나 이상을 조합하여 법안을 검색합니다.
+                    
+                    - keyword: bill_title / bill_summary / proposer 에 부분 일치 검색
+                    - start, end: propose_dt 발의일 범위 (yyyy-MM-dd)
+                    - age: 발의 대수 (예: 21)
+                    - party: 발의 의원 정당명
+                    - procResultCd: 심사 단계 코드
+                      (대안반영폐기, 부결, 불성립, 수정가결, 수정안반영폐기, 원안가결, 임기만료폐기, 철회 만 허용)
+                    
+                    예시:
+                    /v1/bills/filter?keyword=의료&start=2025-10-01&end=2025-10-31&age=22&party=더불어민주당&procResultCd=원안가결
+                    """
+    )
+    @GetMapping("/filter")
+    public ResponseEntity<List<Bill>> filterBills(
+            @Parameter(description = "검색어 (bill_title / bill_summary / proposer 부분 일치)", example = "의료")
+            @RequestParam(name = "keyword", required = false) String keyword,
+
+            @Parameter(description = "발의 시작일 (포함, yyyy-MM-dd)", example = "2025-10-01")
+            @RequestParam(name = "start", required = false) String startStr,
+
+            @Parameter(description = "발의 종료일 (포함, yyyy-MM-dd)", example = "2025-10-31")
+            @RequestParam(name = "end", required = false) String endStr,
+
+            @Parameter(description = "발의 대수 (예: 21)", example = "22")
+            @RequestParam(name = "age", required = false) Integer age,
+
+            @Parameter(description = "발의 의원 정당명", example = "더불어민주당")
+            @RequestParam(name = "party", required = false) String party,
+
+            @Parameter(
+                    description = """
+                            심사 단계 코드 (proc_result_cd).
+                            허용 값: 대안반영폐기, 부결, 불성립, 수정가결, 수정안반영폐기, 원안가결, 임기만료폐기, 철회
+                            """,
+                    example = "원안가결"
+            )
+            @RequestParam(name = "procResultCd", required = false) String procResultCd
+    ) {
+        // 1) procResultCd 유효성 검증 (허용되지 않는 값이면 400)
+        if (procResultCd != null && !procResultCd.isBlank()) {
+            String trimmed = procResultCd.trim();
+            if (!ALLOWED_PROC_RESULT_CODES.contains(trimmed)) {
+                // 파라미터 오류 → 400 Bad Request
+                return ResponseEntity.badRequest().build();
+            }
+        }
+
+        // 2) 필터 하나도 없으면 400
+        boolean noFilter =
+                (keyword == null || keyword.isBlank()) &&
+                        (startStr == null || startStr.isBlank()) &&
+                        (endStr == null || endStr.isBlank()) &&
+                        age == null &&
+                        (party == null || party.isBlank()) &&
+                        (procResultCd == null || procResultCd.isBlank());
+
+        if (noFilter) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // 3) 날짜 파싱
+        LocalDate startDate = null;
+        LocalDate endDate = null;
+
+        if (startStr != null && !startStr.isBlank()) {
+            startDate = LocalDate.parse(startStr);
+        }
+        if (endStr != null && !endStr.isBlank()) {
+            endDate = LocalDate.parse(endStr);
+        }
+
+        // 4) 서비스 호출
+        List<Bill> result = billService.searchBillsWithFilters(
+                keyword,
+                startDate,
+                endDate,
+                age,
+                party,
+                procResultCd == null ? null : procResultCd.trim()
+        );
+
+        return ResponseEntity.ok(result);
     }
 }
