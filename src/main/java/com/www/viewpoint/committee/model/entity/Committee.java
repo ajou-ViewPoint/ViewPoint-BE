@@ -28,5 +28,6 @@ public class Committee {
 
     @Column(name = "committee_name", nullable = false)
     private String committeeName;
+
 }
 
