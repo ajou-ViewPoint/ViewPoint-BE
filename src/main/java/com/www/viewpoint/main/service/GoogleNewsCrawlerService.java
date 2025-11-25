@@ -1,6 +1,7 @@
 package com.www.viewpoint.main.service;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -18,24 +19,31 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class GoogleNewsCrawlerService {
 
     private static final String UA =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
     private final GeminiClient geminiClient;
+    private final ImagenClient imagenClient;
 
-    public GoogleNewsCrawlerService(GeminiClient geminiClient) {
-        this.geminiClient = geminiClient;
-    }
-
-    public record Article(String title, String link, String source, String content) { }
+    // ✅ 이미지까지 포함하는 Article
+    public record Article(
+            String title,
+            String link,
+            String source,
+            String content,
+            List<ImagenClient.GeneratedImage> images
+    ) { }
 
     private record NewsCard(String title, String link, String source) { }
 
@@ -101,11 +109,23 @@ public class GoogleNewsCrawlerService {
             cards = fetchGoogleNewsCards("법안", MAX_CANDIDATES);
         } catch (Exception e) {
             log.error("Failed to fetch Google news cards", e);
-            return new Article("(제목 없음)", "", "(언론사 없음)", "(본문 내용 없음)");
+            return new Article(
+                    "(제목 없음)",
+                    "",
+                    "(언론사 없음)",
+                    "(본문 내용 없음)",
+                    Collections.emptyList()
+            );
         }
 
         if (cards == null || cards.isEmpty()) {
-            return new Article("(제목 없음)", "", "(언론사 없음)", "(본문 내용 없음)");
+            return new Article(
+                    "(제목 없음)",
+                    "",
+                    "(언론사 없음)",
+                    "(본문 내용 없음)",
+                    Collections.emptyList()
+            );
         }
 
         Article bestFallback = null;
@@ -123,26 +143,40 @@ public class GoogleNewsCrawlerService {
 
                 if (htmlLen < 500) {
                     log.info("Skip card (too short html): {}", card.link());
-                    continue; // 영상/에러 가능성 높음 → 다음 기사
+                    continue; // 영상/에러 가능성 높음
                 }
 
                 preExtract = preExtractLikelyBody(renderedHtml);
                 int preLen = preExtract != null ? preExtract.length() : 0;
                 log.info("PreExtract length = {}", preLen);
 
-                // 영상 기사 등: 본문이 거의 없으면 이 카드 스킵
                 if (preLen < MIN_VALID_BODY) {
                     log.info("Skip card (preExtract too short): {}", card.link());
-                    // fallback 후보로는 남겨둘 수 있음
-                    if (bestFallback == null) {
-                        String fallbackText = (preExtract != null && !preExtract.isBlank())
-                                ? preExtract.trim()
-                                : Jsoup.parse(renderedHtml).text();
-                        bestFallback = new Article(
-                                card.title(), card.link(), card.source(),
-                                (fallbackText != null && !fallbackText.isBlank())
-                                        ? fallbackText
-                                        : "(본문 내용 없음)"
+
+                    if (bestFallback != null) {
+                        log.info("Using bestFallback article: {}", bestFallback.link());
+
+                        String imagePrompt = buildImagenPromptFromArticle(
+                                bestFallback.title(),
+                                bestFallback.content()
+                        );
+
+                        List<ImagenClient.GeneratedImage> images = Collections.emptyList();
+                        if (imagePrompt != null && !imagePrompt.isBlank()) {
+                            try {
+                                images = imagenClient.generateImages(imagePrompt, 1);
+                            } catch (Exception imgErr) {
+                                log.warn("Imagen generation failed for bestFallback {}, reason={}",
+                                        bestFallback.link(), imgErr.toString());
+                            }
+                        }
+
+                        return new Article(
+                                bestFallback.title(),
+                                bestFallback.link(),
+                                bestFallback.source(),
+                                bestFallback.content(),
+                                images
                         );
                     }
                     continue;
@@ -167,17 +201,37 @@ public class GoogleNewsCrawlerService {
                     }
                 }
 
-                // Gemini 결과 검증
                 if (finalBody == null || finalBody.trim().length() < MIN_VALID_BODY) {
-                    // Gemini 결과 별로면 preExtract 사용
                     finalBody = preExtract;
                 }
+
 
                 if (finalBody != null && finalBody.trim().length() >= MIN_VALID_BODY) {
 
                     String cleaned = finalBody.trim();
                     log.info("Selected card {} with final body length = {}", card.link(), cleaned.length());
-                    return new Article(card.title(), card.link(), card.source(), cleaned);
+
+                    // ✅ 기사 전체를 활용해 Gemini로부터 Imagen용 프롬프트 생성
+                    String imagePrompt = buildImagenPromptFromArticle(card.title(), cleaned);
+
+                    List<ImagenClient.GeneratedImage> images = Collections.emptyList();
+                    if (imagePrompt != null && !imagePrompt.isBlank()) {
+                        try {
+                            images = imagenClient.generateImages(imagePrompt, 1);
+                        } catch (Exception imgErr) {
+                            log.warn("Imagen generation failed for card {}, reason={}", card.link(), imgErr.toString());
+                        }
+                    } else {
+                        log.warn("Image prompt from Gemini was empty, skipping Imagen call");
+                    }
+
+                    return new Article(
+                            card.title(),
+                            card.link(),
+                            card.source(),
+                            cleaned,
+                            images
+                    );
                 } else {
                     log.info("Skip card (final body too short): {}", card.link());
                 }
@@ -187,43 +241,65 @@ public class GoogleNewsCrawlerService {
             }
         }
 
-        // 후보들 다 별로였으면, 그 중 그나마 첫 fallback 사용
+        // 후보들 다 별로였으면 fallback 사용
         if (bestFallback != null) {
             log.info("Using bestFallback article: {}", bestFallback.link());
-            return bestFallback;
+
+            String prompt = buildImagePrompt(bestFallback.title(), bestFallback.content());
+            List<ImagenClient.GeneratedImage> images;
+            try {
+                images = imagenClient.generateImages(prompt, 1);
+            } catch (Exception imgErr) {
+                log.warn("Imagen generation failed for bestFallback {}, reason={}",
+                        bestFallback.link(), imgErr.toString());
+                images = Collections.emptyList();
+            }
+
+            return new Article(
+                    bestFallback.title(),
+                    bestFallback.link(),
+                    bestFallback.source(),
+                    bestFallback.content(),
+                    images
+            );
         }
 
         // 진짜 아무 것도 못 건지면
         NewsCard first = cards.get(0);
-        return new Article(first.title(), first.link(), first.source(), "(본문 내용 없음)");
-    }
+        String fallbackContent = "(본문 내용 없음)";
 
-    private NewsCard fetchTopGoogleNewsCard(String query) throws Exception {
-        String url = "https://www.google.com/search?q="
-                + URLEncoder.encode(query, StandardCharsets.UTF_8)
-                + "&tbm=nws&tbs=qdr:d";
-
-        Document doc = Jsoup.connect(url)
-                .userAgent(UA)
-                .referrer("https://www.google.com/")
-                .timeout(8000)
-                .get();
-
-        Element first = doc.selectFirst("div.SoaBEf, div.dbsr, div.xuvV6b");
-        if (first == null) {
-            log.warn("No first news card found for query={}", query);
-            return null;
+        List<ImagenClient.GeneratedImage> images;
+        try {
+            images = imagenClient.generateImages(
+                    buildImagePrompt(first.title(), fallbackContent),
+                    1
+            );
+        } catch (Exception imgErr) {
+            log.warn("Imagen generation failed for ultimate fallback {}, reason={}",
+                    first.link(), imgErr.toString());
+            images = Collections.emptyList();
         }
 
-        Element a = first.selectFirst("a.WlydOe, a");
-        Element ttl = first.selectFirst("div.MBeuO, div.n0jPhd, div[role=heading]");
-        Element src = first.selectFirst("div.CEMjEf, div.SVJrMe, div.MVoHrc, span.xQ82C");
-
-        return new NewsCard(
-                ttl != null ? ttl.text() : "(제목 없음)",
-                a != null ? a.attr("href") : "",
-                src != null ? src.text() : "(언론사 없음)"
+        return new Article(
+                first.title(),
+                first.link(),
+                first.source(),
+                fallbackContent,
+                images
         );
+    }
+
+    // 기사 제목 + 본문 앞부분으로 이미지 프롬프트 생성
+    private String buildImagePrompt(String title, String body) {
+        String safeBody = body == null ? "" : body;
+        String safeTitle = (title == null || title.isBlank()) ? "" : title;
+
+        String prefix = safeTitle.isBlank() ? "" : safeTitle + " - ";
+        String truncatedBody = safeBody.length() > 600
+                ? safeBody.substring(0, 600)
+                : safeBody;
+
+        return prefix + truncatedBody;
     }
 
     private String fetchRenderedHtml(String url) throws Exception {
@@ -232,23 +308,20 @@ public class GoogleNewsCrawlerService {
         }
 
         try {
-            // Jsoup으로 직접 HTML 요청
             Connection connection = Jsoup.connect(url)
                     .userAgent(UA)
                     .referrer("https://www.google.com/")
                     .header("Accept-Language", "ko-KR,ko;q=0.9")
-                    .timeout(10000)  // 10초 타임아웃
+                    .timeout(10000)
                     .ignoreContentType(true)
                     .ignoreHttpErrors(true);
 
             Document doc = connection.get();
 
-            // JS 없이 렌더링된 HTML 반환
             String html = doc.outerHtml();
 
-            // HTML이 너무 짧으면 실패 처리
             if (html == null || html.length() < 500) {
-                log.warn("Jsoup fetch returned unusually short HTML ({} chars)", html.length());
+                log.warn("Jsoup fetch returned unusually short HTML ({} chars)", html == null ? 0 : html.length());
             }
 
             return html;
@@ -265,7 +338,6 @@ public class GoogleNewsCrawlerService {
         try {
             Document doc = Jsoup.parse(html);
 
-            // 1. 노이즈 엘리먼트 제거
             doc.select("""
                 script, style, iframe, noscript, aside, figure, header, footer,
                 .ad, [class*=ad], [id*=ad], [class*=banner], [id*=banner],
@@ -276,7 +348,6 @@ public class GoogleNewsCrawlerService {
 
             List<String> chunks = new ArrayList<>();
 
-            // 2. <article> 전체 수집
             for (Element e : doc.select("article")) {
                 String t = e.text().trim();
                 if (t.length() >= 50) {
@@ -284,7 +355,6 @@ public class GoogleNewsCrawlerService {
                 }
             }
 
-            // 3. id가 article* 인 div/section 전체 수집
             for (Element e : doc.select("div[id^=article], section[id^=article]")) {
                 String t = e.text().trim();
                 if (t.length() >= 50) {
@@ -292,7 +362,6 @@ public class GoogleNewsCrawlerService {
                 }
             }
 
-            // 4. class에 article 포함된 컨테이너
             for (Element e : doc.select("div[class*=article], section[class*=article]")) {
                 String t = e.text().trim();
                 if (t.length() >= 80) {
@@ -300,23 +369,19 @@ public class GoogleNewsCrawlerService {
                 }
             }
 
-            // 5. HTML 주석 중 "기사 본문" 힌트 활용
-            //    <!-- 기사 본문 -->, <!-- 기사 본분 --> 등 오타도 포함해서 검사
             doc.traverse(new NodeVisitor() {
                 @Override
                 public void head(Node node, int depth) {
                     if (node.nodeName().equals("#comment")) {
-                        String c = node.toString(); // <!-- ... -->
+                        String c = node.toString();
                         String lower = c.toLowerCase();
                         if (lower.contains("기사 본문") || lower.contains("기사 본분")) {
-                            // (1) 부모 엘리먼트 텍스트
                             if (node.parent() instanceof Element parent) {
                                 String t = parent.text().trim();
                                 if (t.length() >= 50) {
                                     chunks.add(t);
                                 }
                             }
-                            // (2) 다음 형제 엘리먼트(실제 본문 블록인 경우 많음)
                             Node sib = node.nextSibling();
                             if (sib instanceof Element sibling) {
                                 String t = sibling.text().trim();
@@ -332,7 +397,6 @@ public class GoogleNewsCrawlerService {
                 public void tail(Node node, int depth) { }
             });
 
-            // 6. 중복 제거 + 합치기
             LinkedHashSet<String> unique = new LinkedHashSet<>(chunks);
             String combined = String.join("\n", unique).trim();
 
@@ -340,7 +404,6 @@ public class GoogleNewsCrawlerService {
                 return cleanBodyText(combined);
             }
 
-            // 7. 부족하면 특정 영역 p 태그 기반
             String pJoined = doc.select("article p, div[id^=article] p, section[id^=article] p, div[class*=article] p")
                     .stream()
                     .map(el -> el.text().trim())
@@ -352,7 +415,6 @@ public class GoogleNewsCrawlerService {
                 return cleanBodyText(pJoined);
             }
 
-            // 8. 그래도 안 되면 전체 p 기반
             String allP = doc.select("p")
                     .stream()
                     .map(el -> el.text().trim())
@@ -364,7 +426,6 @@ public class GoogleNewsCrawlerService {
                 return cleanBodyText(allP);
             }
 
-            // 9. 최후 fallback: 전체 텍스트
             return cleanBodyText(doc.text());
 
         } catch (Exception e) {
@@ -383,5 +444,46 @@ public class GoogleNewsCrawlerService {
                 .replaceAll("(돌아가기\\s*)+", " ")
                 .replaceAll("\\s{2,}", " ")
                 .trim();
+    }
+
+    private String buildImagenPromptFromArticle(String title, String article) {
+        if (article == null || article.isBlank()) {
+            return null;
+        }
+
+        // 기사 제목도 같이 주면 프롬프트 만들 때 도움될 수 있음
+        String articleWithTitle = (title == null || title.isBlank())
+                ? article
+                : "기사 제목: " + title + "\n\n기사 본문:\n" + article;
+
+        String systemPrompt = """
+    역할: 당신은 이미지 생성용 프롬프트를 작성하는 도우미다.
+
+    아래의 기사를 한 차례 자체적으로 요약한 후 요구사항을 수행하되 요청한 프롬프트 이외의 것은 출력하지 마라.
+
+    위에서 제공한 기사에 등장하는 법안을 설명하는 이미지를 만들려고 한다.
+    이에 이미지를 가장 효율적으로 만들 수 있는 프롬프트를 작성하라.
+    프롬프트에는 기사 안에서 법안의 등장 맥락 혹은 내용을 추출해서 이미지에 반영하라.
+    이미지에는 글자를 포함시키지 말고 그림을 활용해서 직관적으로 만들어라.
+    실사보다는 아이콘을 활용해서 인포그래픽처럼 생성하라.
+    이미지는 법안관련 카드뉴스에 활용할 것이다.
+    크기는 16*9로 만들도록 프롬프트를 작성하라.
+    """;
+
+        try {
+            // ✅ 여기서는 "기사 전체"를 그대로 두 번째 인자로 넘김 (자르지 않음)
+            String prompt = geminiClient.extractArticlePlain(systemPrompt, articleWithTitle);
+            if (prompt != null) {
+                prompt = prompt.trim();
+            }
+            return prompt;
+        } catch (Exception e) {
+            log.warn("Failed to build Imagen prompt via Gemini", e);
+            // 완전 실패하면 아주 단순한 fallback 프롬프트
+            if (title != null && !title.isBlank()) {
+                return "Infographic style 16:9 illustration explaining a Korean bill: " + title;
+            }
+            return "Infographic style 16:9 illustration explaining a Korean bill, using icons and no text.";
+        }
     }
 }
