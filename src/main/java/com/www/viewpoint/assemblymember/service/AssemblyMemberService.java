@@ -24,8 +24,18 @@ public class AssemblyMemberService {
 
 
     public Page<AssemblyMember> getAssemblyMemberAll(int page, int size, String sortBy, String direction) {
-        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+        if (sortBy == null || sortBy.isBlank()) {
+            sortBy = "id";
+        }
+
+        Sort.Direction sortDirection =
+                direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        Sort sort = Sort.by(sortDirection, sortBy);
+
+        sort = sort.and(Sort.by(Sort.Direction.ASC, "id"));
+
+        Pageable pageable = PageRequest.of(page, size, sort);
         return assemblyMemberRespotiroy.findAll(pageable);
     }
 

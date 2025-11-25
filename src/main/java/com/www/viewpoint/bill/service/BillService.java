@@ -109,25 +109,26 @@ public class BillService {
         return (base == null) ? next : base.and(next);
     }
 
-    public List<Bill> searchBillsWithFilters(
+    public Page<Bill> searchBillsWithFilters(
             String keyword,
             LocalDate startDate,
             LocalDate endDate,
             Integer age,
             String party,
-            String procResultCd
+            String procResultCd,
+            Pageable pageable
     ) {
         Specification<Bill> spec = null;
 
-        // 1) 검색어 필터 (기존 /search 와 동일)
+        // 1) 검색어 필터
         if (keyword != null && !keyword.isBlank()) {
             String kw = keyword.trim().toLowerCase();
 
             Specification<Bill> keywordSpec = (root, query, cb) -> {
-                var titleExpr   = cb.lower(root.get("billTitle"));
-                var summaryExpr = cb.lower(root.get("billSummary"));
+                var titleExpr    = cb.lower(root.get("billTitle"));
+                var summaryExpr  = cb.lower(root.get("billSummary"));
                 var proposerExpr = cb.lower(root.get("proposer"));
-                String pattern = "%" + kw + "%";
+                String pattern   = "%" + kw + "%";
 
                 return cb.or(
                         cb.like(titleExpr, pattern),
@@ -139,7 +140,7 @@ public class BillService {
             spec = andSpec(spec, keywordSpec);
         }
 
-        // 2) 발의 기간 필터 (proposeDt)
+        // 2) 발의 기간 필터
         if (startDate != null || endDate != null) {
             LocalDate s = (startDate == null) ? LocalDate.of(1900, 1, 1) : startDate;
             LocalDate e = (endDate == null) ? LocalDate.of(2999, 12, 31) : endDate;
@@ -181,12 +182,11 @@ public class BillService {
         if (party != null && !party.isBlank()) {
             String partyName = party.trim();
 
-            // 이 메서드는 이미 있다고 가정 (bill_id 리스트만 반환)
             List<String> billIds = billProposerRepository.findBillIdsByPartyName(partyName);
 
             if (billIds == null || billIds.isEmpty()) {
-                // 해당 정당으로 발의한 법안이 하나도 없으면, 다른 필터와 관계 없이 결과는 빈 리스트
-                return List.of();
+                // 이 경우는 아예 결과가 없으니 빈 페이지 반환
+                return Page.empty(pageable);
             }
 
             Specification<Bill> partySpec = (root, query, cb) ->
@@ -195,17 +195,12 @@ public class BillService {
             spec = andSpec(spec, partySpec);
         }
 
-        // spec == null 이라는 것은 “아무 필터도 적용 안 됨” 이라는 뜻
-        // - 컨트롤러에서 미리 체크해서 400을 던지거나
-        // - 여기서 전체 조회를 허용하거나 둘 중 하나 선택
+        // spec == null 은 컨트롤러에서 noFilter를 막았기 때문에 거의 안 들어옴
         if (spec == null) {
-            // 1) 전체를 그냥 다 주고 싶으면
-            // return billRepository.findAll();
-
-            // 2) “적어도 한 개 필터는 있어야 한다” 정책이면
-            return List.of(); // 또는 IllegalArgumentException 던지기
+            // 방어 코드: 전체 조회 or 빈 페이지, 정책에 따라 선택
+            return Page.empty(pageable);
         }
 
-        return billRepository.findAll(spec);
+        return billRepository.findAll(spec, pageable);
     }
 }

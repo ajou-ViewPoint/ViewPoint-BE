@@ -13,6 +13,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -163,21 +166,21 @@ public class BillController {
     @Operation(
             summary = "복합 필터 기반 법안 검색",
             description = """
-                    아래 필터 중 하나 이상을 조합하여 법안을 검색합니다.
-                    
-                    - keyword: bill_title / bill_summary / proposer 에 부분 일치 검색
-                    - start, end: propose_dt 발의일 범위 (yyyy-MM-dd)
-                    - age: 발의 대수 (예: 21)
-                    - party: 발의 의원 정당명
-                    - procResultCd: 심사 단계 코드
-                      (대안반영폐기, 부결, 불성립, 수정가결, 수정안반영폐기, 원안가결, 임기만료폐기, 철회 만 허용)
-                    
-                    예시:
-                    /v1/bills/filter?keyword=의료&start=2025-10-01&end=2025-10-31&age=22&party=더불어민주당&procResultCd=원안가결
-                    """
+                아래 필터 중 하나 이상을 조합하여 법안을 검색합니다.
+                
+                - keyword: bill_title / bill_summary / proposer 에 부분 일치 검색
+                - start, end: propose_dt 발의일 범위 (yyyy-MM-dd)
+                - age: 발의 대수 (예: 21)
+                - party: 발의 의원 정당명
+                - procResultCd: 심사 단계 코드
+                  (대안반영폐기, 부결, 불성립, 수정가결, 수정안반영폐기, 원안가결, 임기만료폐기, 철회 만 허용)
+                
+                예시:
+                /v1/bills/filter?keyword=의료&start=2025-10-01&end=2025-10-31&age=22&party=더불어민주당&procResultCd=원안가결
+                """
     )
     @GetMapping("/filter")
-    public ResponseEntity<List<Bill>> filterBills(
+    public ResponseEntity<Page<Bill>> filterBills(
             @Parameter(description = "검색어 (bill_title / bill_summary / proposer 부분 일치)", example = "의료")
             @RequestParam(name = "keyword", required = false) String keyword,
 
@@ -195,18 +198,29 @@ public class BillController {
 
             @Parameter(
                     description = """
-                            심사 단계 코드 (proc_result_cd).
-                            허용 값: 대안반영폐기, 부결, 불성립, 수정가결, 수정안반영폐기, 원안가결, 임기만료폐기, 철회
-                            """,
+                        심사 단계 코드 (proc_result_cd).
+                        허용 값: 대안반영폐기, 부결, 불성립, 수정가결, 수정안반영폐기, 원안가결, 임기만료폐기, 철회
+                        """,
                     example = "원안가결"
             )
-            @RequestParam(name = "procResultCd", required = false) String procResultCd
+            @RequestParam(name = "procResultCd", required = false) String procResultCd,
+
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+            @RequestParam(name = "page", defaultValue = "0") int page,
+
+            @Parameter(description = "페이지당 항목 수", example = "20")
+            @RequestParam(name = "size", defaultValue = "20") int size,
+
+            @Parameter(description = "정렬 기준 필드 (예: billId, proposeDt 등)", example = "proposeDt")
+            @RequestParam(name = "sortBy", defaultValue = "proposeDt") String sortBy,
+
+            @Parameter(description = "정렬 방향 (asc / desc)", example = "desc")
+            @RequestParam(name = "direction", defaultValue = "desc") String direction
     ) {
-        // 1) procResultCd 유효성 검증 (허용되지 않는 값이면 400)
+        // 1) procResultCd 유효성 검증
         if (procResultCd != null && !procResultCd.isBlank()) {
             String trimmed = procResultCd.trim();
             if (!ALLOWED_PROC_RESULT_CODES.contains(trimmed)) {
-                // 파라미터 오류 → 400 Bad Request
                 return ResponseEntity.badRequest().build();
             }
         }
@@ -235,14 +249,25 @@ public class BillController {
             endDate = LocalDate.parse(endStr);
         }
 
-        // 4) 서비스 호출
-        List<Bill> result = billService.searchBillsWithFilters(
+        // 4) 정렬 + 페이지네이션 설정
+        Sort.Direction sortDirection =
+                direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        // 메인 정렬 기준 + id 서브 정렬로 안정성 확보 (중복 페이지 방지)
+        Sort sort = Sort.by(sortDirection, sortBy)
+                .and(Sort.by(Sort.Direction.ASC, "id"));
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // 5) 서비스 호출
+        Page<Bill> result = billService.searchBillsWithFilters(
                 keyword,
                 startDate,
                 endDate,
                 age,
                 party,
-                procResultCd == null ? null : procResultCd.trim()
+                procResultCd == null ? null : procResultCd.trim(),
+                pageable
         );
 
         return ResponseEntity.ok(result);
