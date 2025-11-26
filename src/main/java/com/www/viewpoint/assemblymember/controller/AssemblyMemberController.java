@@ -4,25 +4,30 @@ import com.www.viewpoint.assemblymember.model.dto.AssemblyMemberDto;
 import com.www.viewpoint.assemblymember.model.entity.AssemblyMember;
 import com.www.viewpoint.assemblymember.service.AssemblyMemberService;
 import com.www.viewpoint.bill.model.dto.BillSummaryDto;
+import com.www.viewpoint.bill.model.dto.VoteSummaryByMemberResponse;
+import com.www.viewpoint.bill.service.BillService;
 import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "AssemblyMember API", description = "국회의원(AssemblyMember) 관련 API")
 @RestController
+@AllArgsConstructor
 @RequestMapping("/v1/assemblymembers")
 public class AssemblyMemberController {
 
-    private AssemblyMemberService assemblyMemberService;
+    private  final AssemblyMemberService assemblyMemberService;
+    private final BillService billService;
 
-    AssemblyMemberController(@Autowired AssemblyMemberService assemblyMemberService) {
-        this.assemblyMemberService = assemblyMemberService;
-    }
 
     @Operation(
             summary = "전체 국회 의원 조회",
@@ -70,5 +75,24 @@ public class AssemblyMemberController {
         return ResponseEntity.ok(bills);
     }
 
+    @GetMapping("/{memberId}/votes")
+    public ResponseEntity<Page<VoteSummaryByMemberResponse>> getVoteSummary(
+            @Parameter(description = "memberId", example = "5397")
+            @PathVariable Long memberId,
+
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+
+            @Parameter(description = "페이지당 항목 수", example = "10")
+            @RequestParam(defaultValue = "10") int size
+    ) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "voteDate"));
+
+        Page<VoteSummaryByMemberResponse> response =
+                billService.getVoteSummary(memberId, pageable);
+
+        return ResponseEntity.ok(response);
+    }
 
 }

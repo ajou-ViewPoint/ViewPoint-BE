@@ -1,6 +1,7 @@
 package com.www.viewpoint.constituency.service;
 
 import com.www.viewpoint.constituency.model.dto.WinnerInfoDto;
+import com.www.viewpoint.constituency.model.dto.WinnerInfoProjection;
 import com.www.viewpoint.constituency.model.entity.Constituency;
 import com.www.viewpoint.constituency.model.entity.KoreaDistrict;
 import com.www.viewpoint.constituency.repository.ConstituencyRepository;
@@ -34,7 +35,7 @@ public class ConstituencyService {
     /**
      * 1. 위경도로 boundary 내부 지역구 탐색 + 해당 지역구 의원 반환
      */
-    public List<WinnerInfoDto> findMembersByCoords(double lon, double lat) {
+    public List<WinnerInfoProjection> findMembersByCoords(double lon, double lat) {
         KoreaDistrict district = districtRepository.findDistrictByCoordinates(lon, lat)
                 .orElseThrow(() -> new IllegalArgumentException("해당 좌표의 행정구역을 찾을 수 없습니다."));
 
@@ -53,7 +54,7 @@ public class ConstituencyService {
     /**
      * 2. sido, sgg, code 기반으로 의원 검색
      */
-    public List<WinnerInfoDto> findMembersByRegion(String sido, String sgg, String code) {
+    public List<WinnerInfoProjection> findMembersByRegion(String sido, String sgg, String code) {
         return winnerInfoRepository.findMembersByRegion(sido, sgg, code);
     }
 

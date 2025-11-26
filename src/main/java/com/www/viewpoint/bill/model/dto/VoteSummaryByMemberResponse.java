@@ -6,8 +6,8 @@ import lombok.Data;
 @Data
 @Builder
 public class VoteSummaryByMemberResponse {
-    private Long billId;
+    private String billId;
     private String voteDate;
-    private String title;
+    private String billTitle;
     private String voteOpinion;
 }

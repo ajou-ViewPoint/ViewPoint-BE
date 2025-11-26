@@ -1,9 +1,7 @@
 package com.www.viewpoint.bill.service;
 
+import com.www.viewpoint.bill.model.dto.*;
 import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
-import com.www.viewpoint.bill.model.dto.BillProposerMemberDto;
-import com.www.viewpoint.bill.model.dto.BillVoteSummaryDto;
-import com.www.viewpoint.bill.model.dto.VoteSummaryProjection;
 import com.www.viewpoint.bill.model.entity.Bill;
 import com.www.viewpoint.bill.model.entity.BillVoteResult;
 import com.www.viewpoint.bill.repository.BillProposerRepository;
@@ -35,6 +33,18 @@ public class BillService {
         Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
         return billRepository.findAll(pageable);
+    }
+
+    public Page<VoteSummaryByMemberResponse> getVoteSummary(Long memberId, Pageable pageable) {
+        Page<VoteSummaryByMemberProjection> result =
+                billVoteResultRepository.findVoteSummaryByMemberId(memberId, pageable);
+
+        return result.map(v -> VoteSummaryByMemberResponse.builder()
+                .billId(v.getBillId())
+                .voteDate(v.getVoteDate())
+                .billTitle(v.getBillTitle())
+                .voteOpinion(v.getVoteOpinion())
+                .build());
     }
 
     public BillVoteSummaryDto getBillVoteResult(String billId) {
