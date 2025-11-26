@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 @SuperBuilder
 @NoArgsConstructor
 public class WinnerInfoDto extends AssemblyMemberSummaryDto {
+    private  String eraco;
     private String sidoName;
     private String sggName;
     private String regionCd;
@@ -22,6 +23,7 @@ public class WinnerInfoDto extends AssemblyMemberSummaryDto {
             String name,
             String party,
             Integer age,
+            String eraco,
             String duty,
             String profileImage,
             String district,
@@ -30,10 +32,11 @@ public class WinnerInfoDto extends AssemblyMemberSummaryDto {
             String regionCd,
             BigDecimal voteRate
     ) {
-        super(id.longValue(), name, party, age, duty, profileImage, district);
+        super(id.longValue(), name, party, age,duty, profileImage, district);
         this.sidoName = sidoName;
         this.sggName = sggName;
         this.regionCd = regionCd;
         this.voteRate = voteRate;
+        this.eraco = eraco;
     }
 }

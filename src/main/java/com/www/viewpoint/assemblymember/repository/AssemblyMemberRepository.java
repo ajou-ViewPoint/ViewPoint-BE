@@ -8,7 +8,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -26,35 +25,101 @@ public interface AssemblyMemberRepository extends JpaRepository<AssemblyMember, 
     List<AssemblyMember> findRandomLimit8();
 
     @Query(value = """
-        SELECT 
-            m.naas_code       AS naasCode,
-            m.name            AS name,
-            m.profile_image   AS profileImage,
-            ame.election_district AS district
-        FROM national_assembly_member m
-        LEFT JOIN assembly_member_eraco ame
-          ON ame.member_id = m.id
-         AND ame.eraco = m.eraco   -- 현재 회기 기준으로 매칭 (상황에 따라 조정 가능)
-        WHERE m.age = ?1
+       SELECT
+            n.id AS memberId,
+            n.name AS name,
+            le.party_name AS party,
+            le.age AS age,
+            n.duty AS duty,
+            n.profile_image AS profileImage,
+            le.election_district AS district,
+            -- AssemblyMemberDto 필드들
+            n.eng_name AS engName,
+            n.ch_name AS chName,
+            n.birth_date AS birthDate,
+            n.gender AS gender,
+            n.phone AS phone,
+            n.inner_duty AS innerDuty,
+            n.attendance_rate AS attendanceRate,
+            n.loyalty_rate AS loyaltyRate,
+            n.history AS history
+        FROM national_assembly_member n
+        LEFT JOIN (
+            SELECT
+                t.member_id,
+                t.age,
+                t.election_district,
+                t.party_name
+            FROM (
+                SELECT
+                    ame.member_id,
+                    ame.age,
+                    ame.election_district,
+                    p.party_name AS party_name,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY ame.member_id
+                        ORDER BY ame.age DESC
+                    ) AS rn
+                FROM assembly_member_eraco ame
+                LEFT JOIN party p
+                    ON ame.party_id = p.id
+            ) t
+            WHERE t.age = :age
+        ) le
+            ON le.member_id = n.id
+        WHERE le.age IS NOT NULL
         ORDER BY RAND()
         LIMIT 8
         """, nativeQuery = true)
-    List<MemberSimpleProjection> findRandomByAgeLimit8WithDistrict(Integer age);
+    List<AssemblyMemberQueryProjection> findRandomByAgeLimit8WithDistrict(Integer age);
 
     @Query(value = """
-        SELECT 
-            m.naas_code       AS naasCode,
-            m.name            AS name,
-            m.profile_image   AS profileImage,
-            ame.election_district AS district
-        FROM national_assembly_member m
-        LEFT JOIN assembly_member_eraco ame
-          ON ame.member_id = m.id
-         AND ame.eraco = m.eraco
+          SELECT
+            n.id AS memberId,
+            n.name AS name,
+            le.party_name AS party,
+            le.age AS age,
+            n.duty AS duty,
+            n.profile_image AS profileImage,
+            le.election_district AS district,
+            -- AssemblyMemberDto 필드들
+            n.eng_name AS engName,
+            n.ch_name AS chName,
+            n.birth_date AS birthDate,
+            n.gender AS gender,
+            n.phone AS phone,
+            n.inner_duty AS innerDuty,
+            n.attendance_rate AS attendanceRate,
+            n.loyalty_rate AS loyaltyRate,
+            n.history AS history
+        FROM national_assembly_member n
+        LEFT JOIN (
+            SELECT
+                t.member_id,
+                t.age,
+                t.election_district,
+                t.party_name
+            FROM (
+                SELECT
+                    ame.member_id,
+                    ame.age,
+                    ame.election_district,
+                    p.party_name AS party_name,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY ame.member_id
+                        ORDER BY ame.age DESC
+                    ) AS rn
+                FROM assembly_member_eraco ame
+                LEFT JOIN party p
+                    ON ame.party_id = p.id
+            ) t
+            WHERE t.rn = 1
+        ) le
+            ON le.member_id = n.id
         ORDER BY RAND()
         LIMIT 8
         """, nativeQuery = true)
-    List<MemberSimpleProjection> findRandomLimit8WithDistrict();
+    List<AssemblyMemberQueryProjection> findRandomLimit8WithDistrict();
 
 
     @Query(value = """
@@ -104,6 +169,58 @@ public interface AssemblyMemberRepository extends JpaRepository<AssemblyMember, 
         """,
             nativeQuery = true)
     Optional<AssemblyMemberQueryProjection> findAssemblyMemberById(@Param("id") Long id);
+
+
+    @Query(value = """
+        SELECT
+            n.id AS memberId,
+            n.name AS name,
+            le.party_name AS party,
+            le.age AS age,
+            n.duty AS duty,
+            n.profile_image AS profileImage,
+            le.election_district AS district,
+            -- AssemblyMemberDto 필드들
+            n.eng_name AS engName,
+            n.ch_name AS chName,
+            n.birth_date AS birthDate,
+            n.gender AS gender,
+            n.phone AS phone,
+            n.inner_duty AS innerDuty,
+            n.attendance_rate AS attendanceRate,
+            n.loyalty_rate AS loyaltyRate,
+            n.history AS history
+        FROM national_assembly_member n
+        LEFT JOIN (
+            SELECT
+                t.member_id,
+                t.age,
+                t.election_district,
+                t.party_name
+            FROM (
+                SELECT
+                    ame.member_id,
+                    ame.age,
+                    ame.election_district,
+                    p.party_name AS party_name,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY ame.member_id
+                        ORDER BY ame.age DESC
+                    ) AS rn
+                FROM assembly_member_eraco ame
+                LEFT JOIN party p
+                    ON ame.party_id = p.id
+            ) t
+            WHERE t.rn = 1
+        ) le
+        ON le.member_id = n.id
+        """,
+            countQuery = """
+        SELECT count(*)
+        FROM national_assembly_member n
+    """,
+        nativeQuery = true)
+    Page<AssemblyMemberQueryProjection> findAllAssemblyMember(Pageable pageable);
 
     @Query(
             value = """
@@ -197,4 +314,6 @@ public interface AssemblyMemberRepository extends JpaRepository<AssemblyMember, 
             @Param("eraco") String eraco,
             Pageable pageable
     );
+
+
 }

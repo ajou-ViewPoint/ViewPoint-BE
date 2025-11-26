@@ -2,6 +2,7 @@ package com.www.viewpoint.bill.controller;
 
 import com.www.viewpoint.bill.model.dto.BillProposerMemberDto;
 import com.www.viewpoint.bill.model.dto.BillVoteSummaryDto;
+import com.www.viewpoint.bill.model.dto.VoteSummaryByMemberResponse;
 import com.www.viewpoint.bill.model.entity.Bill;
 import com.www.viewpoint.bill.service.BillService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -272,4 +273,5 @@ public class BillController {
 
         return ResponseEntity.ok(result);
     }
+
 }

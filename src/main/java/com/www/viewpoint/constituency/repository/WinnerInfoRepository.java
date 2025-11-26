@@ -1,6 +1,7 @@
 package com.www.viewpoint.constituency.repository;
 
 import com.www.viewpoint.constituency.model.dto.WinnerInfoDto;
+import com.www.viewpoint.constituency.model.dto.WinnerInfoProjection;
 import com.www.viewpoint.constituency.model.entity.WinnerInfo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,55 +13,74 @@ import java.util.List;
 @Repository
 public interface WinnerInfoRepository extends JpaRepository<WinnerInfo, Long> {
 
-    @Query("""
-        SELECT new com.www.viewpoint.constituency.model.dto.WinnerInfoDto(
-            am.id,                
-            wi.name,              
-            p.partyName,          
-            am.age,               
-            am.duty,              
-            am.profileImage,      
-            kd.sggName,           
-            kd.sidoName,          
-            kd.sggName,           
-            kd.code,             
-            wi.dugyul             
-        )
-        FROM WinnerInfo wi
-        LEFT JOIN Party p ON wi.partyId = p.id
-        LEFT JOIN AssemblyMember am ON wi.memberId = am.id
-        LEFT JOIN KoreaDistrict kd ON wi.regionId = kd.id
-        WHERE (:sido IS NULL OR kd.sidoName = :sido)
-          AND (:sgg IS NULL OR kd.sggName = :sgg)
+    @Query(value = """
+        SELECT 
+          am.id            AS id,
+           wi.name          AS name,
+           p.party_name      AS party,
+           wi.eraco           AS age,
+           am.eraco         AS eraco,
+           am.duty          AS duty,
+           am.profile_image  AS profileImage,
+           wi.sgg_name       AS district,
+           kd.sido_name      AS sidoName,
+           kd.sgg_name       AS sggName,
+           kd.code          AS regionCd,
+          wi.dugyul        AS voteRate  
+        FROM winner_info wi
+        JOIN (
+                SELECT w.member_id, MAX(w.eraco) AS maxEraco
+                FROM winner_info w
+                GROUP BY w.member_id
+            ) latest
+                ON latest.member_id = wi.member_id
+               AND latest.maxEraco = wi.eraco
+        LEFT JOIN party p ON wi.party_id = p.id
+        LEFT JOIN national_assembly_member am ON wi.member_id = am.id
+        LEFT JOIN korea_districts kd ON wi.region_id = kd.id
+        WHERE (:sido IS NULL OR kd.sido_name = :sido)
+          AND (:sgg IS NULL OR kd.sgg_name = :sgg)
           AND (:code IS NULL OR kd.code = :code)
         ORDER BY wi.eraco DESC
-""")
-    List<WinnerInfoDto> findMembersByRegion(
+""",
+            nativeQuery = true
+    )
+    List<WinnerInfoProjection> findMembersByRegion(
             @Param("sido") String sido,
             @Param("sgg") String sgg,
             @Param("code") String  code
     );
 
-    @Query("""
-         SELECT new com.www.viewpoint.constituency.model.dto.WinnerInfoDto(
-            am.id,                
-            wi.name,              
-            p.partyName,          
-            am.age,               
-            am.duty,              
-            am.profileImage,      
-            kd.sggName,           
-            kd.sidoName,          
-            kd.sggName,           
-            kd.code,             
-            wi.dugyul             
-        )
-        FROM WinnerInfo wi
-        LEFT JOIN Party p ON wi.partyId = p.id
-        LEFT JOIN AssemblyMember am ON wi.memberId = am.id
-        LEFT JOIN KoreaDistrict  kd ON wi.regionId =kd.id
-        WHERE wi.regionId = :regionId
+    @Query(value = """
+         SELECT 
+           am.id            AS id,
+           wi.name          AS name,
+           p.party_name      AS party,
+           wi.eraco           AS age,
+           am.eraco         AS eraco,
+           am.duty          AS duty,
+           am.profile_image  AS profileImage,
+           wi.sgg_name       AS district,
+           kd.sido_name      AS sidoName,
+           kd.sgg_name       AS sggName,
+           kd.code          AS regionCd,
+          wi.dugyul        AS voteRate         
+        
+        FROM winner_info wi
+        JOIN (
+                SELECT w.member_id, MAX(w.eraco) AS maxEraco
+                FROM winner_info w
+                GROUP BY w.member_id
+            ) latest
+                ON latest.member_id = wi.member_id
+               AND latest.maxEraco = wi.eraco
+        LEFT JOIN party p ON wi.party_id = p.id
+        LEFT JOIN national_assembly_member am ON wi.member_id = am.id
+        LEFT JOIN korea_districts kd ON wi.region_id = kd.id
+        WHERE wi.region_id = :regionId
         ORDER BY wi.eraco DESC
-    """)
-    List<WinnerInfoDto> findWinnerByRegionId(@Param("regionId") Long regionId);
+    """,
+            nativeQuery = true
+    )
+    List<WinnerInfoProjection> findWinnerByRegionId(@Param("regionId") Long regionId);
 }

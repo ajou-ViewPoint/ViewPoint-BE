@@ -6,6 +6,7 @@ import com.www.viewpoint.assemblymember.model.dto.AssemblyMemberQueryProjection;
 import com.www.viewpoint.assemblymember.repository.AssemblyMemberRepository;
 import com.www.viewpoint.bill.model.dto.BillSummaryDto;
 import com.www.viewpoint.bill.repository.BillProposerRepository;
+import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,50 +22,31 @@ public class AssemblyMemberService {
     private final AssemblyMemberRepository assemblyMemberRespotiroy;
     private final BillProposerRepository billProposerRespotiroy;
 
-
-
-    public Page<AssemblyMember> getAssemblyMemberAll(int page, int size, String sortBy, String direction) {
-        if (sortBy == null || sortBy.isBlank()) {
-            sortBy = "id";
-        }
-
-        Sort.Direction sortDirection =
-                direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
-
-        Sort sort = Sort.by(sortDirection, sortBy);
-
-        sort = sort.and(Sort.by(Sort.Direction.ASC, "id"));
-
-        Pageable pageable = PageRequest.of(page, size, sort);
-        return assemblyMemberRespotiroy.findAll(pageable);
+    private AssemblyMemberSummaryDto toSummaryDto(AssemblyMemberQueryProjection p) {
+        return AssemblyMemberSummaryDto.builder()
+                .memberId(p.getMemberId())
+                .name(p.getName())
+                .party(p.getParty())
+                .age(p.getAge())
+                .duty(p.getDuty())
+                .profileImage(p.getProfileImage())
+                .district(p.getDistrict())
+                .build();
     }
 
-    public AssemblyMemberDto getAssemblyMemberById(Long id) {
+    public Page<AssemblyMemberSummaryDto> getAssemblyMemberAll(int page, int size, String sortBy, String direction) {
+        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+        return assemblyMemberRespotiroy.findAllAssemblyMember(pageable)
+                .map(this::toSummaryDto);
+    }
 
-        AssemblyMemberQueryProjection am = assemblyMemberRespotiroy.findAssemblyMemberById(id)
+
+    public AssemblyMember getAssemblyMemberById(Long id) {
+
+        AssemblyMember am = assemblyMemberRespotiroy.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("No AssemblyMember found with id:" + id));
-        return AssemblyMemberDto.builder()
-                .memberId(am.getMemberId())
-                .name(am.getName())
-                .party(am.getParty())
-                .age(am.getAge())
-                .duty(am.getDuty())
-                .profileImage(am.getProfileImage())
-                .district(am.getDistrict())
-
-                // 상세 필드
-                .engName(am.getEngName())
-                .chName(am.getChName())
-                .birthDate(
-                        am.getBirthDate() != null ? am.getBirthDate().toString() : null
-                )
-                .gender(am.getGender())
-                .phone(am.getPhone())
-                .innerDuty(am.getInnerDuty())
-                .attendanceRate(am.getAttendanceRate())
-                .loyaltyRate(am.getLoyaltyRate())
-                .history(am.getHistory())
-                .build();
+        return am;
     }
 
     public Page<BillSummaryDto> getBillsByMemberId(Integer memberId, int page, int size, String sortBy, String direction) {

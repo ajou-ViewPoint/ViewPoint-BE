@@ -1,6 +1,7 @@
 package com.www.viewpoint.main.dto;
 
 import com.www.viewpoint.bill.model.entity.Bill;
+import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,5 +16,5 @@ import java.util.List;
 @Builder
 public class MainHomeResponse {
     private List<Bill> recentBills;           // 최근 법안 3개
-    private List<MemberSimpleDto> members;    // 랜덤 의원 8명 (간단 필드)
+    private List<AssemblyMemberSummaryDto> members;    // 랜덤 의원 8명 (간단 필드)
 }

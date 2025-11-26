@@ -15,6 +15,8 @@ public class AssemblyMemberDto extends AssemblyMemberSummaryDto {
     String engName;
     String chName;
     String birthDate;
+    String electionDistrict;
+    String eraco;
     String gender;
     String phone;
     String innerDuty;
