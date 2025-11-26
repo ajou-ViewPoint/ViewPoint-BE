@@ -37,15 +37,25 @@ public class AssemblyMemberService {
     public Page<AssemblyMemberSummaryDto> getAssemblyMemberAll(int page, int size, String sortBy, String direction) {
         Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
-        return assemblyMemberRespotiroy.findAllAssemblyMembers(pageable)
+        return assemblyMemberRespotiroy.findAllAssemblyMember(pageable)
                 .map(this::toSummaryDto);
-
     }
 
-    public AssemblyMemberDto getAssemblyMemberById(Long id) {
 
-        AssemblyMemberQueryProjection am = assemblyMemberRespotiroy.findAssemblyMemberById(id)
+    public AssemblyMember getAssemblyMemberById(Long id) {
+
+        AssemblyMember am = assemblyMemberRespotiroy.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("No AssemblyMember found with id:" + id));
+        return am;
+    }
+
+    public Page<BillSummaryDto> getBillsByMemberId(Integer memberId, int page, int size, String sortBy, String direction) {
+        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+        return billProposerRespotiroy.findBillsByMemberId(memberId, pageable);
+    }
+
+    private AssemblyMemberDto toDto(AssemblyMemberQueryProjection am) {
         return AssemblyMemberDto.builder()
                 .memberId(am.getMemberId())
                 .name(am.getName())
@@ -54,8 +64,6 @@ public class AssemblyMemberService {
                 .duty(am.getDuty())
                 .profileImage(am.getProfileImage())
                 .district(am.getDistrict())
-
-                // 상세 필드
                 .engName(am.getEngName())
                 .chName(am.getChName())
                 .birthDate(
@@ -70,9 +78,22 @@ public class AssemblyMemberService {
                 .build();
     }
 
-    public Page<BillSummaryDto> getBillsByMemberId(Integer memberId, int page, int size, String sortBy, String direction) {
-        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+    public Page<AssemblyMemberDto> filterAssemblyMembers(
+            String keyword,
+            String eraco,
+            int page,
+            int size,
+            String sortBy,
+            String direction
+    ) {
+        Sort.Direction sortDirection =
+                direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
-        return billProposerRespotiroy.findBillsByMemberId(memberId, pageable);
+
+        Page<AssemblyMemberQueryProjection> resultPage =
+                assemblyMemberRespotiroy.searchMembers(keyword, eraco, pageable);
+
+        return resultPage.map(this::toDto);
     }
 }

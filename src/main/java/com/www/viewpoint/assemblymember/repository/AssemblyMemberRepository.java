@@ -2,13 +2,12 @@ package com.www.viewpoint.assemblymember.repository;
 
 import com.www.viewpoint.assemblymember.model.entity.AssemblyMember;
 import com.www.viewpoint.assemblymember.model.dto.AssemblyMemberQueryProjection;
-import com.www.viewpoint.share.dto.AssemblySummaryMemberProjection;
+import com.www.viewpoint.main.repository.MemberSimpleProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -26,16 +25,26 @@ public interface AssemblyMemberRepository extends JpaRepository<AssemblyMember, 
     List<AssemblyMember> findRandomLimit8();
 
     @Query(value = """
-        SELECT 
+       SELECT
             n.id AS memberId,
             n.name AS name,
             le.party_name AS party,
             le.age AS age,
             n.duty AS duty,
             n.profile_image AS profileImage,
-            le.election_district AS district
+            le.election_district AS district,
+            -- AssemblyMemberDto 필드들
+            n.eng_name AS engName,
+            n.ch_name AS chName,
+            n.birth_date AS birthDate,
+            n.gender AS gender,
+            n.phone AS phone,
+            n.inner_duty AS innerDuty,
+            n.attendance_rate AS attendanceRate,
+            n.loyalty_rate AS loyaltyRate,
+            n.history AS history
         FROM national_assembly_member n
-         LEFT JOIN (
+        LEFT JOIN (
             SELECT
                 t.member_id,
                 t.age,
@@ -54,27 +63,37 @@ public interface AssemblyMemberRepository extends JpaRepository<AssemblyMember, 
                 FROM assembly_member_eraco ame
                 LEFT JOIN party p
                     ON ame.party_id = p.id
-                WHERE ame.age = ?1
-
             ) t
-            WHERE t.rn = 1
-        ) le ON le.member_id = n.id   -- 현재 회기 기준으로 매칭 (상황에 따라 조정 가능)
+            WHERE t.age = :age
+        ) le
+            ON le.member_id = n.id
+        WHERE le.age IS NOT NULL
         ORDER BY RAND()
         LIMIT 8
         """, nativeQuery = true)
-    List<AssemblySummaryMemberProjection> findRandomByAgeLimit8WithDistrict(Integer age);
+    List<AssemblyMemberQueryProjection> findRandomByAgeLimit8WithDistrict(Integer age);
 
     @Query(value = """
-         SELECT 
+          SELECT
             n.id AS memberId,
             n.name AS name,
             le.party_name AS party,
             le.age AS age,
             n.duty AS duty,
             n.profile_image AS profileImage,
-            le.election_district AS district
+            le.election_district AS district,
+            -- AssemblyMemberDto 필드들
+            n.eng_name AS engName,
+            n.ch_name AS chName,
+            n.birth_date AS birthDate,
+            n.gender AS gender,
+            n.phone AS phone,
+            n.inner_duty AS innerDuty,
+            n.attendance_rate AS attendanceRate,
+            n.loyalty_rate AS loyaltyRate,
+            n.history AS history
         FROM national_assembly_member n
-         LEFT JOIN (
+        LEFT JOIN (
             SELECT
                 t.member_id,
                 t.age,
@@ -95,11 +114,12 @@ public interface AssemblyMemberRepository extends JpaRepository<AssemblyMember, 
                     ON ame.party_id = p.id
             ) t
             WHERE t.rn = 1
-        ) le ON le.member_id = n.id   -- 현재 회기 기준으로 매칭 (상황에 따라 조정 가능)
+        ) le
+            ON le.member_id = n.id
         ORDER BY RAND()
         LIMIT 8
         """, nativeQuery = true)
-    List<AssemblySummaryMemberProjection> findRandomLimit8WithDistrict();
+    List<AssemblyMemberQueryProjection> findRandomLimit8WithDistrict();
 
 
     @Query(value = """
@@ -151,8 +171,7 @@ public interface AssemblyMemberRepository extends JpaRepository<AssemblyMember, 
     Optional<AssemblyMemberQueryProjection> findAssemblyMemberById(@Param("id") Long id);
 
 
-    @Query(
-            value = """
+    @Query(value = """
         SELECT
             n.id AS memberId,
             n.name AS name,
@@ -161,6 +180,7 @@ public interface AssemblyMemberRepository extends JpaRepository<AssemblyMember, 
             n.duty AS duty,
             n.profile_image AS profileImage,
             le.election_district AS district,
+            -- AssemblyMemberDto 필드들
             n.eng_name AS engName,
             n.ch_name AS chName,
             n.birth_date AS birthDate,
@@ -192,12 +212,108 @@ public interface AssemblyMemberRepository extends JpaRepository<AssemblyMember, 
                     ON ame.party_id = p.id
             ) t
             WHERE t.rn = 1
-        ) le ON le.member_id = n.id
+        ) le
+        ON le.member_id = n.id
         """,
             countQuery = """
-        SELECT COUNT(*) FROM national_assembly_member
+        SELECT count(*)
+        FROM national_assembly_member n
+    """,
+        nativeQuery = true)
+    Page<AssemblyMemberQueryProjection> findAllAssemblyMember(Pageable pageable);
+
+    @Query(
+            value = """
+        SELECT
+            n.id AS memberId,
+            n.name AS name,
+            le.party_name AS party,
+            le.age AS age,
+            n.duty AS duty,
+            n.profile_image AS profileImage,
+            le.election_district AS district,
+            -- 상세 필드
+            n.eng_name AS engName,
+            n.ch_name AS chName,
+            n.birth_date AS birthDate,
+            n.gender AS gender,
+            n.phone AS phone,
+            n.inner_duty AS innerDuty,
+            n.attendance_rate AS attendanceRate,
+            n.loyalty_rate AS loyaltyRate,
+            n.history AS history
+        FROM national_assembly_member n
+        LEFT JOIN (
+            SELECT
+                ame.member_id,
+                ame.age,
+                ame.election_district,
+                ame.eraco,
+                p.party_name AS party_name,
+                ROW_NUMBER() OVER (
+                    PARTITION BY ame.member_id
+                    ORDER BY ame.age DESC
+                ) AS rn
+            FROM assembly_member_eraco ame
+            LEFT JOIN party p
+                ON ame.party_id = p.id
+        ) le
+            ON le.member_id = n.id
+           AND le.rn = 1
+        WHERE 1 = 1
+          -- 🔍 검색어 필터: 이름 / 정당 / 지역구
+          AND (
+              :keyword IS NULL OR :keyword = '' OR
+              n.name LIKE CONCAT('%', :keyword, '%') OR
+              le.party_name LIKE CONCAT('%', :keyword, '%') OR
+              le.election_district LIKE CONCAT('%', :keyword, '%')
+          )
+          -- 🏛 재직 대수 필터: assembly_member_eraco.eraco 기준 (예: '제22대')
+          AND (
+              :eraco IS NULL OR :eraco = '' OR
+              le.eraco = :eraco
+          )
+        """,
+            countQuery = """
+        SELECT
+            COUNT(*)
+        FROM national_assembly_member n
+        LEFT JOIN (
+            SELECT
+                ame.member_id,
+                ame.age,
+                ame.election_district,
+                ame.eraco,
+                p.party_name AS party_name,
+                ROW_NUMBER() OVER (
+                    PARTITION BY ame.member_id
+                    ORDER BY ame.age DESC
+                ) AS rn
+            FROM assembly_member_eraco ame
+            LEFT JOIN party p
+                ON ame.party_id = p.id
+        ) le
+            ON le.member_id = n.id
+           AND le.rn = 1
+        WHERE 1 = 1
+          AND (
+              :keyword IS NULL OR :keyword = '' OR
+              n.name LIKE CONCAT('%', :keyword, '%') OR
+              le.party_name LIKE CONCAT('%', :keyword, '%') OR
+              le.election_district LIKE CONCAT('%', :keyword, '%')
+          )
+          AND (
+              :eraco IS NULL OR :eraco = '' OR
+              le.eraco = :eraco
+          )
         """,
             nativeQuery = true
     )
-    Page<AssemblyMemberQueryProjection> findAllAssemblyMembers(Pageable pageable);
+    Page<AssemblyMemberQueryProjection> searchMembers(
+            @Param("keyword") String keyword,
+            @Param("eraco") String eraco,
+            Pageable pageable
+    );
+
+
 }

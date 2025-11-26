@@ -57,5 +57,7 @@ public interface BillProposerRepository extends JpaRepository<BillProposer, Inte
             Pageable pageable
     );
 
+    @Query("select distinct bp.billId from BillProposer bp where bp.partyName = :partyName")
+    List<String> findBillIdsByPartyName(@Param("partyName") String partyName);
 
 }
