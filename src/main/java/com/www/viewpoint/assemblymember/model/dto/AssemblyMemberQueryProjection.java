@@ -18,6 +18,8 @@ public interface AssemblyMemberQueryProjection {
     String getPhone();
     String getInnerDuty();
     String getHistory();
+    String getElectionDistrict();
+    String getEraco();
     Double getAttendanceRate();
     Double getLoyaltyRate();
 

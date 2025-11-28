@@ -1,6 +1,7 @@
 package com.www.viewpoint.constituency.controller;
 
 import com.www.viewpoint.constituency.model.dto.WinnerInfoDto;
+import com.www.viewpoint.constituency.model.dto.WinnerInfoProjection;
 import com.www.viewpoint.constituency.model.entity.Constituency;
 import com.www.viewpoint.constituency.service.ConstituencyService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,7 +78,7 @@ public class ConstituencyController {
                     """
     )
     @GetMapping("/by-coords")
-    public List<WinnerInfoDto> findByCoords(
+    public List<WinnerInfoProjection> findByCoords(
             @Parameter(
                     description = "경도 (Longitude)",
                     example = "127.023031"
@@ -101,7 +102,7 @@ public class ConstituencyController {
                     """
     )
     @GetMapping("/by-region")
-    public List<WinnerInfoDto> findByRegion(
+    public List<WinnerInfoProjection> findByRegion(
             @Parameter(description = "시도명 (예: 서울특별시)", example = "서울특별시")
             @RequestParam(required = false) String sido,
             @Parameter(description = "시군구명 (예: 강동구)", example = "강동구")

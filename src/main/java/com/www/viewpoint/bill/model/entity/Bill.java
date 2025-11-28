@@ -82,4 +82,7 @@ public class Bill {
 
     @Column(name = "curr_trans_dt")
     private LocalDate currTransDt;
+
+    @Column(name ="topic")
+    private String topic;
 }

@@ -1,8 +1,11 @@
 package com.www.viewpoint.bill.repository;
 
+import com.www.viewpoint.bill.model.dto.VoteSummaryByMemberProjection;
 import com.www.viewpoint.bill.model.dto.VoteSummaryProjection;
 import com.www.viewpoint.bill.model.entity.BillVoteResult;
 import com.www.viewpoint.bill.model.entity.BillVoteResultId;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -53,4 +56,29 @@ public interface BillVoteResultRepository
             nativeQuery = true
     )
     List<VoteSummaryProjection> findVoteSummary(@Param("billId") String billId);
+
+
+    @Query(
+            value = """
+        SELECT 
+            b.bill_id as billId,
+            v.vote_date AS voteDate,
+            b.bill_title As billTitle,
+            v.vote_opinion AS voteOpinion
+        FROM vote_bill_nass v
+        JOIN bill b
+            ON v.bill_id =b.bill_id
+        JOIN national_assembly_member n
+            ON v.nass_id = n.id
+        WHERE n.id = :memberId
+        AND v.vote_opinion IN ('찬성', '반대')
+        """, countQuery = """
+        SELECT COUNT(*)
+        FROM vote_bill_nass v
+        JOIN national_assembly_member n ON v.nass_id = n.id
+        WHERE n.id = :memberId
+        AND v.vote_opinion IN ('찬성', '반대')
+        """, nativeQuery = true
+    )
+    Page<VoteSummaryByMemberProjection> findVoteSummaryByMemberId(@Param("memberId") Long memberId , Pageable pageable);
 }
