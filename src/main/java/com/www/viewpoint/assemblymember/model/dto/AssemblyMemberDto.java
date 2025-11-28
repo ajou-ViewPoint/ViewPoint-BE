@@ -19,7 +19,6 @@ public class AssemblyMemberDto  {
     private String name;
     private String duty;
     private String profileImage;
-    private String district;
     String engName;
     String chName;
     String birthDate;

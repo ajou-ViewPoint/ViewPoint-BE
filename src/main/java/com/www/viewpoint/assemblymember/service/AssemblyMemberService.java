@@ -78,7 +78,11 @@ public class AssemblyMemberService {
                 .eraco(eracoList)
                 .electionDistrict(districtList)
                 .parties(partyList)
+                .history(am.getHistory())
                 .committees(committees)
+                .phone(am.getPhone())
+                .gender(am.getGender())
+                .innerDuty(am.getInnerDuty())
                 .build();
 
 
@@ -97,7 +101,6 @@ public class AssemblyMemberService {
                 .name(am.getName())
                 .duty(am.getDuty())
                 .profileImage(am.getProfileImage())
-                .district(am.getDistrict())
                 .engName(am.getEngName())
                 .chName(am.getChName())
                 .birthDate(
