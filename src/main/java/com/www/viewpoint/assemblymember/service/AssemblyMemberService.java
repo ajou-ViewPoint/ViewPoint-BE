@@ -72,7 +72,7 @@ public class AssemblyMemberService {
         return AssemblyMemberDto.builder()
                 .memberId(am.getId().longValue())
                 .name(am.getName())
-                .profileImage(am.getProfileImage())
+                .profileImage(am.getProfileImageBase64())
                 .engName(am.getEngName())
                 .chName(am.getChName())
                 .eraco(eracoList)
