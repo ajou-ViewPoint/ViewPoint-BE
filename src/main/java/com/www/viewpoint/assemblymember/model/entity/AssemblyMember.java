@@ -79,6 +79,9 @@ public class AssemblyMember {
     )
     private List<Committee> committees;
 
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "member")
+    private List<AssemblyMemberEraco> eracos;
+
     @Column(name = "party_id")
     private Integer partyId;
 

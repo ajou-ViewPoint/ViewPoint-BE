@@ -3,9 +3,11 @@ package com.www.viewpoint.assemblymember.service;
 import com.www.viewpoint.assemblymember.model.dto.AssemblyMemberDto;
 import com.www.viewpoint.assemblymember.model.entity.AssemblyMember;
 import com.www.viewpoint.assemblymember.model.dto.AssemblyMemberQueryProjection;
+import com.www.viewpoint.assemblymember.model.entity.AssemblyMemberEraco;
 import com.www.viewpoint.assemblymember.repository.AssemblyMemberRepository;
 import com.www.viewpoint.bill.model.dto.BillSummaryDto;
 import com.www.viewpoint.bill.repository.BillProposerRepository;
+import com.www.viewpoint.committee.model.entity.Committee;
 import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -42,11 +46,43 @@ public class AssemblyMemberService {
     }
 
 
-    public AssemblyMember getAssemblyMemberById(Long id) {
+    public AssemblyMemberDto getAssemblyMemberById(Long id) {
 
         AssemblyMember am = assemblyMemberRespotiroy.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("No AssemblyMember found with id:" + id));
-        return am;
+
+        // 🔥 eraco 리스트 생성
+        List<String> eracoList = am.getEracos().stream()
+                .map(AssemblyMemberEraco::getEraco)
+                .toList();
+
+        // 🔥 electionDistrict 리스트 생성
+        List<String> districtList = am.getEracos().stream()
+                .map(AssemblyMemberEraco::getElectionDistrict)
+                .toList();
+
+        // 🔥 party 리스트 생성
+        List<String> partyList = am.getEracos().stream()
+                .map(e -> e.getParty() != null ? e.getParty().getPartyName() : null)
+                .toList();
+
+        // 🔥 Committee 변환
+        List<Committee> committees = am.getCommittees();
+
+        return AssemblyMemberDto.builder()
+                .memberId(am.getId().longValue())
+                .name(am.getName())
+                .profileImage(am.getProfileImage())
+                .engName(am.getEngName())
+                .chName(am.getChName())
+                .eraco(eracoList)
+                .electionDistrict(districtList)
+                .parties(partyList)
+                .committees(committees)
+                .build();
+
+
+
     }
 
     public Page<BillSummaryDto> getBillsByMemberId(Integer memberId, int page, int size, String sortBy, String direction) {
@@ -59,8 +95,6 @@ public class AssemblyMemberService {
         return AssemblyMemberDto.builder()
                 .memberId(am.getMemberId())
                 .name(am.getName())
-                .party(am.getParty())
-                .age(am.getAge())
                 .duty(am.getDuty())
                 .profileImage(am.getProfileImage())
                 .district(am.getDistrict())
