@@ -15,26 +15,18 @@ public interface WinnerInfoRepository extends JpaRepository<WinnerInfo, Long> {
 
     @Query(value = """
         SELECT 
-          am.id            AS id,
+           am.id            AS memberId,
            wi.name          AS name,
            p.party_name      AS party,
            wi.eraco           AS age,
-           am.eraco         AS eraco,
            am.duty          AS duty,
            am.profile_image  AS profileImage,
            wi.sgg_name       AS district,
            kd.sido_name      AS sidoName,
            kd.sgg_name       AS sggName,
            kd.code          AS regionCd,
-          wi.dugyul        AS voteRate  
+           wi.dugyul        AS voteRate  
         FROM winner_info wi
-        JOIN (
-                SELECT w.member_id, MAX(w.eraco) AS maxEraco
-                FROM winner_info w
-                GROUP BY w.member_id
-            ) latest
-                ON latest.member_id = wi.member_id
-               AND latest.maxEraco = wi.eraco
         LEFT JOIN party p ON wi.party_id = p.id
         LEFT JOIN national_assembly_member am ON wi.member_id = am.id
         LEFT JOIN korea_districts kd ON wi.region_id = kd.id
@@ -53,7 +45,7 @@ public interface WinnerInfoRepository extends JpaRepository<WinnerInfo, Long> {
 
     @Query(value = """
          SELECT 
-           am.id            AS id,
+           am.id            AS memberId,
            wi.name          AS name,
            p.party_name      AS party,
            wi.eraco           AS age,
@@ -64,16 +56,8 @@ public interface WinnerInfoRepository extends JpaRepository<WinnerInfo, Long> {
            kd.sido_name      AS sidoName,
            kd.sgg_name       AS sggName,
            kd.code          AS regionCd,
-          wi.dugyul        AS voteRate         
-        
+           wi.dugyul        AS voteRate         
         FROM winner_info wi
-        JOIN (
-                SELECT w.member_id, MAX(w.eraco) AS maxEraco
-                FROM winner_info w
-                GROUP BY w.member_id
-            ) latest
-                ON latest.member_id = wi.member_id
-               AND latest.maxEraco = wi.eraco
         LEFT JOIN party p ON wi.party_id = p.id
         LEFT JOIN national_assembly_member am ON wi.member_id = am.id
         LEFT JOIN korea_districts kd ON wi.region_id = kd.id
