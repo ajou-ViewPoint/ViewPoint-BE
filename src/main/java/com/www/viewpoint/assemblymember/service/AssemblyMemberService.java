@@ -82,6 +82,7 @@ public class AssemblyMemberService {
                 .committees(committees)
                 .phone(am.getPhone())
                 .gender(am.getGender())
+                .birthDate(am.getBirthDate().toString())
                 .innerDuty(am.getInnerDuty())
                 .build();
 
