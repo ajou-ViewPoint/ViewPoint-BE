@@ -20,6 +20,9 @@ public class AssemblyMember {
     @Column(name = "profile_image", nullable = false, columnDefinition = "TEXT")
     private String profileImage;
 
+    @Column(name = "profile_image_base64", nullable = false, columnDefinition = "TEXT")
+    private String profileImageBase64;
+
     @Column(nullable = false)
     private String name;
 
