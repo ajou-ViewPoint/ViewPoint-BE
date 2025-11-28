@@ -78,6 +78,7 @@ public class AssemblyMemberService {
                 .eraco(eracoList)
                 .electionDistrict(districtList)
                 .parties(partyList)
+                .history(am.getHistory())
                 .committees(committees)
                 .build();
 
