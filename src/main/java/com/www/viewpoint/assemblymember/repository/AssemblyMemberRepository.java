@@ -133,7 +133,7 @@ public interface AssemblyMemberRepository extends JpaRepository<AssemblyMember, 
             le.election_district AS district,
             -- AssemblyMemberDto 필드들
             n.eng_name AS engName,
-            n.ch_name AS chName,
+            n.ch_name AS chName,    
             n.birth_date AS birthDate,
             n.gender AS gender,
             n.phone AS phone,

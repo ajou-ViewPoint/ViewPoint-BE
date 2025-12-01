@@ -1,7 +1,9 @@
 package com.www.viewpoint.assemblymember.model.entity;
+import com.www.viewpoint.committee.model.entity.Committee;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "national_assembly_member")
@@ -19,6 +21,9 @@ public class AssemblyMember {
 
     @Column(name = "profile_image", nullable = false, columnDefinition = "TEXT")
     private String profileImage;
+
+    @Column(name = "profile_image_base64", nullable = false, columnDefinition = "TEXT")
+    private String profileImageBase64;
 
     @Column(nullable = false)
     private String name;
@@ -62,8 +67,23 @@ public class AssemblyMember {
     @Column( columnDefinition = "TEXT")
     private String history;
 
-    @Column(name = "committee_id")
-    private Integer committeeId;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "naas_committee",
+            joinColumns = @JoinColumn(
+                    name = "member_id",              // nass_committee.member_id
+                    referencedColumnName = "id", // 이 엔티티의 member_id 컬럼
+                    insertable = false,
+                    updatable = false
+            ),
+            inverseJoinColumns = @JoinColumn(
+                    name = "committee_id"            // nass_committee.committee_id → Committee.id
+            )
+    )
+    private List<Committee> committees;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "member")
+    private List<AssemblyMemberEraco> eracos;
 
     @Column(name = "party_id")
     private Integer partyId;
