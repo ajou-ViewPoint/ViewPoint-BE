@@ -1,4 +1,5 @@
 package com.www.viewpoint.assemblymember.model.entity;
+import com.www.viewpoint.committee.model.entity.Committee;
 import com.www.viewpoint.party.model.entity.Party;
 import jakarta.persistence.*;
 import lombok.*;
@@ -40,6 +41,16 @@ public class AssemblyMemberEraco {
 
     @Column(name = "election_district_id")
     private Integer electionDistrictId;
+
+    @Column(name = "committee_id")
+    private Integer committeeId;
+
+    @Column(name="age")
+    private Integer age;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "committee_id", insertable = false, updatable = false)
+    private Committee committee;
 
     // ✅ 의원 정보 연관관계 (선택)
     @ManyToOne(fetch = FetchType.LAZY)
