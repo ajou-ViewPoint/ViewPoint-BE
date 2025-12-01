@@ -4,6 +4,7 @@ import com.www.viewpoint.assemblymember.model.dto.AssemblyMemberDto;
 import com.www.viewpoint.assemblymember.model.entity.AssemblyMember;
 import com.www.viewpoint.assemblymember.model.dto.AssemblyMemberQueryProjection;
 import com.www.viewpoint.assemblymember.model.entity.AssemblyMemberEraco;
+import com.www.viewpoint.assemblymember.repository.AssemblyMemberEracoRepository;
 import com.www.viewpoint.assemblymember.repository.AssemblyMemberRepository;
 import com.www.viewpoint.bill.model.dto.BillSummaryDto;
 import com.www.viewpoint.bill.repository.BillProposerRepository;
@@ -25,6 +26,7 @@ public class AssemblyMemberService {
 
     private final AssemblyMemberRepository assemblyMemberRespotiroy;
     private final BillProposerRepository billProposerRespotiroy;
+    private final AssemblyMemberEracoRepository eracoRepository;
 
     private AssemblyMemberSummaryDto toSummaryDto(AssemblyMemberQueryProjection p) {
         return AssemblyMemberSummaryDto.builder()
@@ -37,6 +39,17 @@ public class AssemblyMemberService {
                 .district(p.getDistrict())
                 .build();
     }
+    private AssemblyMemberSummaryDto toSummaryDto(AssemblyMemberEraco e) {
+        return AssemblyMemberSummaryDto.builder()
+                .memberId(e.getMemberId().longValue())
+                .name(e.getMember().getName() ) // 안전 처리
+                .party(e.getParty().getPartyName())
+                .age(e.getAge())
+                .duty(e.getMember() != null ? e.getMember().getDuty() : null)
+                .profileImage(e.getMember() != null ? e.getMember().getProfileImage() : null)
+                .district(e.getElectionDistrict())
+                .build();
+    }
 
     public Page<AssemblyMemberSummaryDto> getAssemblyMemberAll(int page, int size, String sortBy, String direction) {
         Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
@@ -44,7 +57,27 @@ public class AssemblyMemberService {
         return assemblyMemberRespotiroy.findAllAssemblyMember(pageable)
                 .map(this::toSummaryDto);
     }
+    public Page<AssemblyMemberSummaryDto> getAssemblyMemberEracoAll(
+            int page, int size, String sortBy, String direction, String eraco
+    ) {
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                direction.equalsIgnoreCase("asc")
+                        ? Sort.by(sortBy).ascending()
+                        : Sort.by(sortBy).descending()
+        );
 
+        Page<AssemblyMemberEraco> result;
+
+        if (eraco != null && !eraco.isBlank()) {
+            result = eracoRepository.findByEraco(eraco, pageable);
+        } else {
+            result = eracoRepository.findAll(pageable);
+        }
+
+        return result.map(this::toSummaryDto);
+    }
 
     public AssemblyMemberDto getAssemblyMemberById(Long id) {
 

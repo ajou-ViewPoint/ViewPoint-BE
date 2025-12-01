@@ -59,6 +59,33 @@ public class AssemblyMemberController {
 
     }
 
+    @Operation(
+            summary = "대수별 국회의원 조회",
+            description = "특정 대수(eraco)의 국회의원 목록을 페이지네이션과 함께 조회합니다. 예시: /v1/assemblymembers/eracos/제22대?page=0&size=10&sortBy=name&direction=asc"
+    )
+    @GetMapping("/eracos/{eraco}")
+    public ResponseEntity<Page<AssemblyMemberSummaryDto>> getAssemblyMembersByEraco(
+            @Parameter(description = "대수명 (예: 제22대)", example = "제22대")
+            @PathVariable String eraco,
+
+            @Parameter(description = "페이지 번호", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+
+            @Parameter(description = "페이지당 데이터 수", example = "10")
+            @RequestParam(defaultValue = "10") int size,
+
+            @Parameter(description = "정렬 기준", example = "id")
+            @RequestParam(defaultValue = "id") String sortBy,
+
+            @Parameter(description = "정렬 방향", example = "asc")
+            @RequestParam(defaultValue = "asc") String direction
+    ) {
+        Page<AssemblyMemberSummaryDto> assemblyMembers =
+                assemblyMemberService.getAssemblyMemberEracoAll( page, size, sortBy, direction,eraco);
+
+        return ResponseEntity.ok(assemblyMembers);
+    }
+
 
     @Operation(
             summary = "특정 의원이 발의한 법안 조회",
