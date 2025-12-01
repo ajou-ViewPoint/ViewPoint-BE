@@ -3,8 +3,12 @@ package com.www.viewpoint.bill.model.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "bill")
@@ -83,6 +87,7 @@ public class Bill {
     @Column(name = "curr_trans_dt")
     private LocalDate currTransDt;
 
-    @Column(name ="topic")
-    private String topic;
+    @Column(name="topics",columnDefinition = "json")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<String> topics;
 }
