@@ -1,4 +1,5 @@
 package com.www.viewpoint.assemblymember.model.dto;
+import com.www.viewpoint.committee.dto.CommitteeDto;
 import com.www.viewpoint.committee.model.entity.Committee;
 import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
 import lombok.AllArgsConstructor;
@@ -25,7 +26,7 @@ public class AssemblyMemberDto  {
     List<String> electionDistrict;
     List<String> eraco;
     List<String> parties;
-    List<Committee> committees;
+    List<CommitteeDto> committees;
     String gender;
     String phone;
     String innerDuty;
