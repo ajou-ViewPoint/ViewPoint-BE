@@ -8,6 +8,7 @@ import com.www.viewpoint.assemblymember.repository.AssemblyMemberEracoRepository
 import com.www.viewpoint.assemblymember.repository.AssemblyMemberRepository;
 import com.www.viewpoint.bill.model.dto.BillSummaryDto;
 import com.www.viewpoint.bill.repository.BillProposerRepository;
+import com.www.viewpoint.committee.dto.CommitteeDto;
 import com.www.viewpoint.committee.model.entity.Committee;
 import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
 import jakarta.persistence.EntityNotFoundException;
@@ -19,6 +20,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -84,23 +86,27 @@ public class AssemblyMemberService {
         AssemblyMember am = assemblyMemberRespotiroy.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("No AssemblyMember found with id:" + id));
 
-        // 🔥 eraco 리스트 생성
         List<String> eracoList = am.getEracos().stream()
                 .map(AssemblyMemberEraco::getEraco)
                 .toList();
 
-        // 🔥 electionDistrict 리스트 생성
         List<String> districtList = am.getEracos().stream()
                 .map(AssemblyMemberEraco::getElectionDistrict)
                 .toList();
 
-        // 🔥 party 리스트 생성
         List<String> partyList = am.getEracos().stream()
                 .map(e -> e.getParty() != null ? e.getParty().getPartyName() : null)
                 .toList();
 
-        // 🔥 Committee 변환
-        List<Committee> committees = am.getCommittees();
+        List<CommitteeDto> committees = am.getCommittees().stream()
+                .map(c->CommitteeDto.builder()
+                        .id(c.getId())
+                        .committeeCode(c.getCommitteeCode())
+                        .committeeName(c.getCommitteeName())
+                        .scheduleInfo(c.getScheduleInfo())
+                        .activitiesDescription(c.getActivitiesDescription())
+                        .build())
+                .toList();
 
         return AssemblyMemberDto.builder()
                 .memberId(am.getId().longValue())
