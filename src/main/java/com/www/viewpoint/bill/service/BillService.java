@@ -35,6 +35,10 @@ public class BillService {
         return billRepository.findAll(pageable);
     }
 
+//    public Page<Bill> getBills(Pageable pageable) {
+//        return billRepository.findAll(pageable);
+//    }
+
     public Page<VoteSummaryByMemberResponse> getVoteSummary(Long memberId, Pageable pageable) {
         Page<VoteSummaryByMemberProjection> result =
                 billVoteResultRepository.findVoteSummaryByMemberId(memberId, pageable);
@@ -208,7 +212,7 @@ public class BillService {
         // spec == null 은 컨트롤러에서 noFilter를 막았기 때문에 거의 안 들어옴
         if (spec == null) {
             // 방어 코드: 전체 조회 or 빈 페이지, 정책에 따라 선택
-            return Page.empty(pageable);
+            return billRepository.findAll(pageable);
         }
 
         return billRepository.findAll(spec, pageable);

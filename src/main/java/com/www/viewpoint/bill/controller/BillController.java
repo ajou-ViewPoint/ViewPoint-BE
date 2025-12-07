@@ -235,9 +235,9 @@ public class BillController {
                         (party == null || party.isBlank()) &&
                         (procResultCd == null || procResultCd.isBlank());
 
-        if (noFilter) {
-            return ResponseEntity.badRequest().build();
-        }
+//        if (noFilter) {
+//            return ResponseEntity.badRequest().build();
+//        }
 
         // 3) 날짜 파싱
         LocalDate startDate = null;
@@ -259,6 +259,11 @@ public class BillController {
                 .and(Sort.by(Sort.Direction.ASC, "id"));
 
         Pageable pageable = PageRequest.of(page, size, sort);
+//
+//        if (noFilter) {
+//            Page<Bill> allBills = billService.getBills(pageable);
+//            return ResponseEntity.ok(allBills);
+//        }
 
         // 5) 서비스 호출
         Page<Bill> result = billService.searchBillsWithFilters(
