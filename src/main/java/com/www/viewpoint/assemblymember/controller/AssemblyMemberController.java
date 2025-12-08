@@ -1,7 +1,6 @@
 package com.www.viewpoint.assemblymember.controller;
 
 import com.www.viewpoint.assemblymember.model.dto.AssemblyMemberDto;
-import com.www.viewpoint.assemblymember.model.entity.AssemblyMember;
 import com.www.viewpoint.assemblymember.service.AssemblyMemberService;
 import com.www.viewpoint.bill.model.dto.BillSummaryDto;
 import com.www.viewpoint.bill.model.dto.VoteSummaryByMemberResponse;
@@ -11,7 +10,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -120,6 +118,50 @@ public class AssemblyMemberController {
                 billService.getVoteSummary(memberId, pageable);
 
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "복합 필터 기반 국회의원 검색",
+            description = """
+                아래 필터 중 하나 이상을 조합하여 국회의원을 검색합니다.
+                
+                - keyword: 의원 이름으로 부분 일치 검색
+                - eraco: 재직 대수 (예: 제22대)
+                - party: 정당명 (예: 더불어민주당)
+                
+                모든 필터는 선택사항이며, eraco entity에서 필터링한 후 memberId로 그룹화하여 반환합니다.
+                
+                예시:
+                /v1/assemblymembers/filter?keyword=홍길동&eraco=제22대&party=더불어민주당&page=0&size=10&sortBy=name&direction=asc
+                """
+    )
+    @GetMapping("/filter")
+    public ResponseEntity<Page<AssemblyMemberDto>> filterAssemblyMembers(
+            @Parameter(description = "의원 이름 검색어", example = "홍길동")
+            @RequestParam(name = "keyword", required = false) String keyword,
+
+            @Parameter(description = "재직 대수 (예: 제22대)", example = "제22대")
+            @RequestParam(name = "eraco", required = false) String eraco,
+
+            @Parameter(description = "정당명", example = "더불어민주당")
+            @RequestParam(name = "party", required = false) String party,
+
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+            @RequestParam(name = "page", defaultValue = "0") int page,
+
+            @Parameter(description = "페이지당 항목 수", example = "10")
+            @RequestParam(name = "size", defaultValue = "10") int size,
+
+            @Parameter(description = "정렬 기준 필드 (예: id, name 등)", example = "id")
+            @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
+
+            @Parameter(description = "정렬 방향 (asc / desc)", example = "desc")
+            @RequestParam(name = "direction", defaultValue = "desc") String direction
+    ) {
+        Page<AssemblyMemberDto> result = assemblyMemberService.filterAssemblyMembers(
+                keyword, eraco, party, page, size, sortBy, direction
+        );
+        return ResponseEntity.ok(result);
     }
 
 }

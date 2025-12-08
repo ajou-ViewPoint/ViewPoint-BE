@@ -9,7 +9,6 @@ import com.www.viewpoint.assemblymember.repository.AssemblyMemberRepository;
 import com.www.viewpoint.bill.model.dto.BillSummaryDto;
 import com.www.viewpoint.bill.repository.BillProposerRepository;
 import com.www.viewpoint.committee.dto.CommitteeDto;
-import com.www.viewpoint.committee.model.entity.Committee;
 import com.www.viewpoint.share.dto.AssemblyMemberSummaryDto;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +19,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -135,6 +133,39 @@ public class AssemblyMemberService {
     }
 
     private AssemblyMemberDto toDto(AssemblyMemberQueryProjection am) {
+        // memberId로 AssemblyMember 엔티티 조회하여 eraco, parties, committees 정보 가져오기
+        AssemblyMember member = assemblyMemberRespotiroy.findById(am.getMemberId())
+                .orElse(null);
+
+        List<String> eracoList = null;
+        List<String> districtList = null;
+        List<String> partyList = null;
+        List<CommitteeDto> committees = null;
+
+        if (member != null) {
+            eracoList = member.getEracos().stream()
+                    .map(AssemblyMemberEraco::getEraco)
+                    .toList();
+
+            districtList = member.getEracos().stream()
+                    .map(AssemblyMemberEraco::getElectionDistrict)
+                    .toList();
+
+            partyList = member.getEracos().stream()
+                    .map(e -> e.getParty() != null ? e.getParty().getPartyName() : null)
+                    .toList();
+
+            committees = member.getCommittees().stream()
+                    .map(c -> CommitteeDto.builder()
+                            .id(c.getId())
+                            .committeeCode(c.getCommitteeCode())
+                            .committeeName(c.getCommitteeName())
+                            .scheduleInfo(c.getScheduleInfo())
+                            .activitiesDescription(c.getActivitiesDescription())
+                            .build())
+                    .toList();
+        }
+
         return AssemblyMemberDto.builder()
                 .memberId(am.getMemberId())
                 .name(am.getName())
@@ -151,12 +182,17 @@ public class AssemblyMemberService {
                 .attendanceRate(am.getAttendanceRate())
                 .loyaltyRate(am.getLoyaltyRate())
                 .history(am.getHistory())
+                .eraco(eracoList)
+                .electionDistrict(districtList)
+                .parties(partyList)
+                .committees(committees)
                 .build();
     }
 
     public Page<AssemblyMemberDto> filterAssemblyMembers(
             String keyword,
             String eraco,
+            String party,
             int page,
             int size,
             String sortBy,
@@ -168,7 +204,7 @@ public class AssemblyMemberService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
 
         Page<AssemblyMemberQueryProjection> resultPage =
-                assemblyMemberRepository.searchMembers(keyword, eraco, pageable);
+                assemblyMemberRepository.filterMembersByEraco(keyword, eraco, party, pageable);
 
         return resultPage.map(this::toDto);
     }
