@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: viewpoint
+
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST}:3306/${MYSQL_DATABASE}
+  #  username: ${MYSQL_USERNAME}
+    password: ${MYSQL_ROOT_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  api-base: https://generativelanguage.googleapis.com
+  api-version: v1beta
+  model-primary: gemini-2.5-pro
+  model-fallback: gemini-2.5-flash
+  image-model: gemini-2.5-flash-image
+
+google:
+  gemini:
+    api-key: ${GEMINI_IMAGE_API_KEY}
+
+kakao:
+  api-key: ${KAKAO_API_KEY}
+
+payment:
+  toss:
+    secret-key: ${TOSS_SECRET_KEY}

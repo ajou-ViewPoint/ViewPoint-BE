@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.1'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'jacoco'
 }
 
 group = 'com.www'
@@ -52,4 +53,66 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    finalizedBy jacocoTestReport // 테스트 후 자동으로 리포트 생성
+}
+
+// JaCoCo 설정
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+// JaCoCo 테스트 리포트 설정
+jacocoTestReport {
+    dependsOn test // 테스트 실행 후 리포트 생성
+
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+
+    // 제외할 클래스 패턴 (DTO, Entity, Config 등)
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    '**/model/dto/**',
+                    '**/model/entity/**',
+                    '**/model/request/**',
+                    '**/model/response/**',
+                    '**/model/enums/**',
+                    '**/config/**',
+                    '**/exception/**',
+                    '**/*Application*',
+                    '**/dto/**'
+            ])
+        }))
+    }
+}
+
+// JaCoCo 커버리지 검증 규칙 (선택 사항)
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            element = 'CLASS'
+
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.0 // 최소 커버리지 비율 (0% - 필요시 조정)
+            }
+
+            // 제외할 클래스
+            excludes = [
+                    '*.model.dto.*',
+                    '*.model.entity.*',
+                    '*.model.request.*',
+                    '*.model.response.*',
+                    '*.model.enums.*',
+                    '*.config.*',
+                    '*.exception.*',
+                    '*.*Application*',
+                    '*.dto.*'
+            ]
+        }
+    }
 }
