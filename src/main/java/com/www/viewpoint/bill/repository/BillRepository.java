@@ -31,8 +31,8 @@ public interface BillRepository extends JpaRepository<Bill, Integer>, JpaSpecifi
     @Query("""
     SELECT b
     FROM Bill b
-    WHERE b.rgsProcDate IS NOT NULL
-    ORDER BY b.rgsProcDate DESC, b.id DESC
+    WHERE b.proposeDt IS NOT NULL
+    ORDER BY b.proposeDt DESC, b.id DESC
 """)
     List<Bill> findTop3ByRgsProcDateDesc(Pageable pageable);
 
